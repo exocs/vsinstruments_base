@@ -1,8 +1,8 @@
 {
 	"item-musicblockcone": "Music Block Cone",
 
-	"block-musicblock-north": "Music Block",
-	"block-musicblock-south": "Music Block",
+	"block-musicblock-north": "ABC Player",
+	"block-musicblock-south": "ABC Player",
 
 	"madefrom-title-steel": "Note:",
 	"madefrom-steel": "Must be made from steel",

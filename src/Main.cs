@@ -36,7 +36,7 @@ namespace instruments
         public float pitch;
         public Vec3d positon;
         public int ID;
-        public InstrumentType instrument;
+        public string instrument;
     }
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class NoteUpdate // Same as NoteStart, any better way to do this?
@@ -56,7 +56,7 @@ namespace instruments
     {
         public string abcData;
         public string bandName;
-        public InstrumentType instrument;
+        public string instrument;
         public bool isServerFile;
     }
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
@@ -71,7 +71,7 @@ namespace instruments
         public Vec3d positon;
         public Chord newChord;
         public int fromClientID;
-        public InstrumentType instrument;
+        public string instrument;
     }
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class ABCStopFromServer
@@ -133,7 +133,7 @@ namespace instruments
         bool clientSideEnable;
         bool clientSideReady = false;
 
-        private Dictionary<InstrumentType, string> soundLocations = new Dictionary<InstrumentType, string>();
+        private Dictionary<string, string> soundLocations = new Dictionary<string, string>();
 
 
         long listenerIDClient = -1;
@@ -166,10 +166,10 @@ namespace instruments
 
             // Go through the list of all instruments (in Instrument.cs) and add a sound file location for each entry.
             // Make sure the folder name is exactly the same as in the enum!
-            for (InstrumentType i = 0; i < InstrumentType.none; i++)
+            foreach(KeyValuePair<string, string> instrumentType in Definitions.GetInstance().GetInstrumentTypes()) //(string i = 0; i < string.none; i++)
             {
-                string s = "sounds/"+i.ToString();
-                soundLocations.Add(i, s);
+                string s = "sounds/"+ instrumentType.Key;
+                soundLocations.Add(instrumentType.Key, s);
             }
 
             thisClientPlaying = false;
@@ -201,7 +201,7 @@ namespace instruments
             if (!clientSideReady) return;
 
             string noteString = "/a3";
-            if (note.instrument == InstrumentType.drum)
+            if (note.instrument == "drum")
             {
                 float div = note.pitch * 2 - 1;
                 const float step = 0.046875f;  // 3/64
@@ -217,7 +217,7 @@ namespace instruments
                 }
                 note.pitch = 1; // Reset the pitch, we don't want any pitch bend for drum
             }
-            else if (note.instrument == InstrumentType.mic)
+            else if (note.instrument == "mic")
             {
                 Random rnd = new Random();
                 int rNum = rnd.Next(0, 5); // A number between 0 and 4
@@ -271,6 +271,8 @@ namespace instruments
         {
             IClientPlayer player = clientApi.World.Player; // If the client is still starting up, this will be null!
             if (player == null)
+                return;
+            if (serverPacket.instrument == "" || serverPacket.instrument == "none")  // An invalid instrument was used, was the instrument pack removed?
                 return;
 
             if (!clientSideEnable)

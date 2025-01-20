@@ -86,11 +86,11 @@ namespace instruments
         public bool isPlayer;
         public Vec3d position;
         public string bandName;
-        public InstrumentType instrument;
+        public string instrument;
         private ICoreServerAPI serverAPI;
         private bool startSync;
 
-        public ABCParser(ICoreServerAPI sAPI, int pID, string name, string f, InstrumentType inst, string bn, float masterTime)
+        public ABCParser(ICoreServerAPI sAPI, int pID, string name, string f, string inst, string bn, float masterTime)
         {
             // Make an ABC parser for a player. The player's position will be used to move the sound around.
             // For now, read the entire file and make all the chord objects at once
@@ -105,7 +105,7 @@ namespace instruments
             isPlayer = true;
             Reset();
         }
-        public ABCParser(ICoreServerAPI sAPI, int owningPlayerID, int bID, Vec3d pos, string name, string f, InstrumentType inst, string bn, float masterTime)
+        public ABCParser(ICoreServerAPI sAPI, int owningPlayerID, int bID, Vec3d pos, string name, string f, string inst, string bn, float masterTime)
         {
             // Make an ABC parser for a block. The position is not updated
             // For now, read the entire file and make all the chord objects at once
@@ -419,7 +419,8 @@ namespace instruments
                 if (isPlayer)
                 {
                     IPlayer player = Array.Find(serverAPI.World.AllOnlinePlayers, x => x.ClientId == playerID);
-                    position = new Vec3d(player.Entity.Pos.X, player.Entity.Pos.Y, player.Entity.Pos.Z);
+                    if(player != null)
+                        position = new Vec3d(player.Entity.Pos.X, player.Entity.Pos.Y, player.Entity.Pos.Z);
                 }
 
                 ABCUpdateFromServer packet = new ABCUpdateFromServer();
@@ -1088,7 +1089,7 @@ namespace instruments
         {
             return list;
         }
-        public void MakeNewParser(ICoreServerAPI sapi, IPlayer byPlayer, string songData, string bandName, InstrumentType instrument)
+        public void MakeNewParser(ICoreServerAPI sapi, IPlayer byPlayer, string songData, string bandName, string instrument)
         {
             // Does some band related checks before creating the parser
             if (bandName == "")
@@ -1116,7 +1117,7 @@ namespace instruments
                     list.Add(abcp);
             }
         }
-        public void MakeNewParser(ICoreServerAPI sapi, IPlayer byPlayer, string songData, int ownerID, string ownerName, string bandName, Vec3d pos, InstrumentType instrument)
+        public void MakeNewParser(ICoreServerAPI sapi, IPlayer byPlayer, string songData, int ownerID, string ownerName, string bandName, Vec3d pos, string instrument)
         {
             // Used by blocks, where the byPlayer isn't the owner!
             if (bandName == "")

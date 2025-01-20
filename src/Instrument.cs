@@ -11,34 +11,15 @@ using Vintagestory.API.Util;  // ToolModes
 
 namespace instruments
 {
-    public enum InstrumentType
-    {
-        trumpet = 0,
-        sax,
-        dulcimer,
-        accordion,
-        bass,
-        violin,
-        clarinet,
-        flute,
-        bagpipes,
-        steeldrum,
-        acousticguitar,
-        grandpiano,
-        musicbox,
-        harp,
-        mic,
-        drum,
-        none
-    }
+
     public class InstrumentItem : Item
     {
         const float PI = 3.14159f;
         private NoteFrequency currentNote;
         private ICoreClientAPI capi;
         bool holding = false;
-        public InstrumentType instrument;
-        protected string animation;
+        public string instrument = "none";
+        protected string animation = "holdbothhands";  // just a placeholder
 
         SkillItem[] toolModes;
         WorldInteraction[] interactions;
@@ -400,29 +381,32 @@ namespace instruments
         }
     }
 
-
+#if false  // I'm keeping this for debugging
     public class AcousticGuitarItem : InstrumentItem
     {
         public override void OnLoaded(ICoreAPI api)
         {
-            instrument = InstrumentType.acousticguitar;
+            instrument = "acousticguitar";
             animation = "holdbothhandslarge";
+            Definitions.GetInstance().AddInstrumentType(instrument, animation);
             base.OnLoaded(api);
         }
     }
-
+#endif
     public class Definitions
     {
         private string bandName = "";
         private PlayMode mode = PlayMode.abc;
         private static Definitions _instance;
         private Dictionary<int, NoteFrequency> noteMap = new Dictionary<int, NoteFrequency>();
-        private Dictionary<Enum, string> animMap = new Dictionary<Enum, string>();
+        private Dictionary<string, string> animMap = new Dictionary<string, string>();
         private const int bufferSize = 32;
         private List<string> abcFiles = new List<string>();
         private List<string> serverAbcFiles = new List<string>();
         private bool messageDone = false;
         private bool abcPlaying = false;
+
+        private Dictionary<string, string> instrumentTypes = new Dictionary<string, string>();
 
         string abcBaseDirectory = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "abc";
 
@@ -455,6 +439,8 @@ namespace instruments
             noteMap.Add(i++, new NoteFrequency("g4", 1.7818f));
             noteMap.Add(i++, new NoteFrequency("g^4", 1.8877f));
             noteMap.Add(i++, new NoteFrequency("a5", 2.0000f));
+
+            instrumentTypes.Add("none", "none");  // Dummy value 
         }
         public static Definitions GetInstance()
         {
@@ -491,9 +477,18 @@ namespace instruments
         {
             return abcFiles;
         }
-        public string GetAnimation(InstrumentType type)
+        public string GetAnimation(string type)
         {
-            return animMap[type];
+            return instrumentTypes[type];
+        }
+        public void AddInstrumentType(string type, string anim)
+        {
+            if(!instrumentTypes.ContainsKey(type))
+                instrumentTypes.Add(type, anim);
+        }
+        public Dictionary<string, string> GetInstrumentTypes()
+        {
+            return instrumentTypes;
         }
         public bool UpdateSongList(ICoreClientAPI capi)
         {

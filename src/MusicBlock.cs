@@ -53,7 +53,7 @@ namespace instruments
         internal MusicBlockInventory inventory;
         MusicBlockGUI musicBlockGUI;
 
-        InstrumentType instrumentType = InstrumentType.none;
+        string instrumentType = "";
         public bool isPlaying = false;
         public BEMusicBlock()
         {
@@ -128,7 +128,7 @@ namespace instruments
                 if (!isPlaying)
                 {
                     // Make a new ABCPlayer!
-                    if (blockName != "" && songName != "" && instrumentType != InstrumentType.none)
+                    if (blockName != "" && songName != "" && (instrumentType != "none" || instrumentType != ""))
                     {
                         if (songData == "") // If there is no songData, the file is probably a server file. Read it from the abc_server folder
                         {
@@ -298,7 +298,7 @@ namespace instruments
                     instrumentType = dummy.instrument;
             }
             else
-                instrumentType = InstrumentType.none;
+                instrumentType = "none";
         }
     }
     public class MusicBlockManager // I've gone singleton crazy
