@@ -132,6 +132,7 @@ namespace instruments
         List<SoundManager> soundManagers;
         bool clientSideEnable;
         bool clientSideReady = false;
+        bool setupDone = false;
 
         private Dictionary<string, string> soundLocations = new Dictionary<string, string>();
 
@@ -164,14 +165,6 @@ namespace instruments
 
             soundManagers = new List<SoundManager>();
 
-            // Go through the list of all instruments (in Instrument.cs) and add a sound file location for each entry.
-            // Make sure the folder name is exactly the same as in the enum!
-            foreach(KeyValuePair<string, string> instrumentType in Definitions.GetInstance().GetInstrumentTypes()) //(string i = 0; i < string.none; i++)
-            {
-                string s = "sounds/"+ instrumentType.Key;
-                soundLocations.Add(instrumentType.Key, s);
-            }
-
             thisClientPlaying = false;
             MusicBlockManager.GetInstance().Reset(); // I think there's a manager for both Server and Client, so reset it I guess
             Definitions.GetInstance().Reset();
@@ -199,6 +192,8 @@ namespace instruments
         private void MakeNote(NoteStart note)
         {
             if (!clientSideReady) return;
+            if (!setupDone)
+                FirstTimeSetup();
 
             string noteString = "/a3";
             if (note.instrument == "drum")
@@ -279,6 +274,9 @@ namespace instruments
                 return;
 
             if (!clientSideReady) return;
+
+            if (!setupDone)
+                FirstTimeSetup();
 
             SoundManager sm = soundManagers.Find(x => (x.sourceID == serverPacket.fromClientID));
             if (sm == null)
@@ -399,6 +397,18 @@ namespace instruments
                     clientApi.ShowChatMessage("Syntax: .instruments [enable|disable]");
                     break;
             }
+        }
+        private void FirstTimeSetup()
+        {
+            // Go through the list of all instruments (in Instrument.cs) and add a sound file location for each entry.
+            // Make sure the folder name is exactly the same as in the enum!
+            // Have to do this after everything else loads, because it likes to attempt it before when the IntrumentTypes dict is empty.
+            foreach (KeyValuePair<string, string> instrumentType in Definitions.GetInstance().GetInstrumentTypes())
+            {
+                string s = "sounds/" + instrumentType.Key;
+                soundLocations.Add(instrumentType.Key, s);
+            }
+            setupDone = true;
         }
 
         #endregion
