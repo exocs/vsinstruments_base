@@ -64,7 +64,7 @@ namespace instruments
         private bool active = true;         // The manager should do Update(). False when playback should stop.
         private string instrumentFileLocation;
         private float volume;
-        public InstrumentType instrument;
+        public string instrument;
 
         private Dictionary<int, string> drumMap = new Dictionary<int, string>();
         private Dictionary<int, string> octaveMap = new Dictionary<int, string>();
@@ -81,7 +81,7 @@ namespace instruments
 
         const int drumSamples = 64;
 
-        public SoundManager(IClientWorldAccessor clientAcc, int sID, string location, InstrumentType inst, float startTime)
+        public SoundManager(IClientWorldAccessor clientAcc, int sID, string location, string inst, float startTime)
         {
             client = clientAcc;
 
@@ -156,7 +156,7 @@ namespace instruments
                             bool play = true;
                             string assetLocation;
                             float pitch;
-                            if (instrument == InstrumentType.drum)
+                            if (instrument == "drum")
                             {
                                 int index = KeyToIndex(note);
 
@@ -178,7 +178,7 @@ namespace instruments
                                     play = false;
                                 }
                                 assetLocation = instrumentFileLocation + "/" + octaveMap[note.octave];
-                                if (instrument == InstrumentType.mic)
+                                if (instrument == "mic")
                                 {
                                     Random rnd = new Random();
                                     int rNum = rnd.Next(0, 5); // A number between 0 and 4
