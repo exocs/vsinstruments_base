@@ -27,7 +27,8 @@ namespace instruments
     {
         allGood = 0,
         finished,
-        error
+        error,
+        overload
     }
     public class ABCParser
     {
@@ -147,12 +148,14 @@ namespace instruments
                 if (chordBuffer.Count == 0)
                     return ExitStatus.finished;
             }
+            if (chordBuffer.Count == InstrumentModCommon.config.abcBufferSize && chordBuffer[^1].CheckShouldStop(currentTime + 1000))  // If the last note in the buffer finishes in the next second, that's too many notes in too short a time! We must DESTROY IT
+                return ExitStatus.overload;
             return allOk;
         }
         private bool ParseFile()
         {
             int timeout = 32;
-            while (chordBuffer.Count < Definitions.GetInstance().GetBufferSize() && timeout > 0)
+            while (chordBuffer.Count < InstrumentModCommon.config.abcBufferSize && timeout > 0)
             {
                 timeout--;
                 if (charIndex >= file.Length || endOfFile)
@@ -1051,7 +1054,7 @@ namespace instruments
             {
                 ABCParser abcp = list[i];
                 ExitStatus parseStatus = abcp.Update(dt);
-                if (parseStatus == ExitStatus.finished || parseStatus == ExitStatus.error)
+                if (parseStatus == ExitStatus.finished || parseStatus == ExitStatus.error || parseStatus == ExitStatus.overload)
                 {
                     // TODO
                     IPlayer player = Array.Find(sapi.World.AllOnlinePlayers, x => x.ClientId == abcp.playerOwnerID);
@@ -1060,6 +1063,10 @@ namespace instruments
                         if (parseStatus == ExitStatus.finished)
                         {
                             MessageToClient(sapi, player, "abc playback finished!");                           
+                        }
+                        else if(parseStatus == ExitStatus.overload)
+                        {
+                            MessageToClient(sapi, player, "abc tried to play too many notes, had to kill it");
                         }
                         else
                             BadABC(sapi, player, abcp.charIndex);

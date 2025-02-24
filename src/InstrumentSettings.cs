@@ -10,5 +10,7 @@ namespace instruments
         public float playerVolume { get; set; } = 0.7f;
         public float blockVolume { get; set; } = 1.0f;
 
+        public int abcBufferSize { get; set; } = 32;
+
     }
 }

@@ -400,7 +400,6 @@ namespace instruments
         private static Definitions _instance;
         private Dictionary<int, NoteFrequency> noteMap = new Dictionary<int, NoteFrequency>();
         private Dictionary<string, string> animMap = new Dictionary<string, string>();
-        private const int bufferSize = 32;
         private List<string> abcFiles = new List<string>();
         private List<string> serverAbcFiles = new List<string>();
         private bool messageDone = false;
@@ -468,10 +467,6 @@ namespace instruments
         public NoteFrequency GetFrequency(int index)
         {
             return noteMap[index];
-        }
-        public int GetBufferSize()
-        {
-            return bufferSize;
         }
         public List<string> GetSongList()
         {
