@@ -139,12 +139,12 @@ namespace instruments
                                 return;
 
                             ABCParsers.GetInstance().MakeNewParser(Api as ICoreServerAPI, byPlayer,
-                                songData, ID, blockName, bandName, Pos.ToVec3d(), instrumentType);
+                                songData, ID, blockName, bandName, Pos.ToVec3d() + new Vec3d(0.5, 0, 0.5), instrumentType);
                         }
                         else
                         {
                             ABCParsers.GetInstance().MakeNewParser(Api as ICoreServerAPI, byPlayer,
-                                songData, ID, blockName, bandName, Pos.ToVec3d(), instrumentType);
+                                songData, ID, blockName, bandName, Pos.ToVec3d() + new Vec3d(0.5, 0, 0.5), instrumentType);
                         }
                     }
                     else
