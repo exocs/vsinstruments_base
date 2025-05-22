@@ -466,7 +466,7 @@ namespace instruments
             MusicBlockManager.GetInstance().Reset();
             ABCParsers.GetInstance().SetAPI(serverAPI);
 
-            abcBaseDir = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "abc_server";
+            
             serverAPI.Event.PlayerJoin += SendSongs;
         }
         public override void Dispose()
@@ -482,11 +482,12 @@ namespace instruments
         }
         public void SendSongs(IServerPlayer byPlayer)
         {
-            if (!RecursiveFileProcessor.DirectoryExists(abcBaseDir))
+            string serverDir = InstrumentModCommon.config.abcServerLocation;
+            if (!RecursiveFileProcessor.DirectoryExists(serverDir))
                 return; // Server has no abcs, do nothing
 
             List<string> abcFiles = new List<string>();
-            RecursiveFileProcessor.ProcessDirectory(abcBaseDir, abcBaseDir + Path.DirectorySeparatorChar, ref abcFiles);
+            RecursiveFileProcessor.ProcessDirectory(serverDir, serverDir + Path.DirectorySeparatorChar, ref abcFiles);
             if (abcFiles.Count == 0)
             {
                 return; // No files in the folder
@@ -526,7 +527,8 @@ namespace instruments
                 {
                     // The contained string is NOT a full song, but a link to it on the server.
                     // Find this file, load it, and make the abcParser in the same way
-                    RecursiveFileProcessor.ReadFile(abcBaseDir + Path.DirectorySeparatorChar + abcData.abcData, ref abcSong);
+                    string fileLocation = InstrumentModCommon.config.abcServerLocation;
+                    RecursiveFileProcessor.ReadFile(fileLocation + Path.DirectorySeparatorChar + abcData.abcData, ref abcSong);
                 }
                 else
                 {

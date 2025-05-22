@@ -407,8 +407,6 @@ namespace instruments
 
         private Dictionary<string, string> instrumentTypes = new Dictionary<string, string>();
 
-        string abcBaseDirectory = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "abc";
-
         private Definitions()
         {
             // Populate the dict
@@ -489,17 +487,18 @@ namespace instruments
         {
             abcFiles.Clear();
             // First, check the client's dir exists
-            if (RecursiveFileProcessor.DirectoryExists(abcBaseDirectory))
+            string localDir = InstrumentModCommon.config.abcLocalLocation;
+            if (RecursiveFileProcessor.DirectoryExists(localDir))
             {
                 // It exists! Now find the files in it
-                RecursiveFileProcessor.ProcessDirectory(abcBaseDirectory, abcBaseDirectory + Path.DirectorySeparatorChar, ref abcFiles);
+                RecursiveFileProcessor.ProcessDirectory(localDir, localDir + Path.DirectorySeparatorChar, ref abcFiles);
             }
             else
             {
                 if (!messageDone)
                 {
                     // Client ABC folder not found, log a message to tell the player where it should be. But still search the server folder
-                    capi.ShowChatMessage("ABC warning: Could not find folder at \"" + abcBaseDirectory + "\". Displaying server files instead.");
+                    capi.ShowChatMessage("ABC warning: Could not find folder at \"" + localDir + "\". Displaying server files instead.");
                     messageDone = true;
                 }
             }
@@ -522,7 +521,7 @@ namespace instruments
         }
         public string ABCBasePath()
         {
-            return abcBaseDirectory;
+            return InstrumentModCommon.config.abcLocalLocation;
         }
         public void SetIsPlaying(bool toggle)
         {

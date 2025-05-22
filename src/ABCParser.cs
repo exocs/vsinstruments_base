@@ -79,7 +79,8 @@ namespace instruments
         bool endOfFile;
         int repeatStartIndex;       // Index in file of where a repeat should start
         List<int> doneRepeats;      // List of repeats that have already been processed, and should be ignored
-        bool hornpipe = false;
+        bool hornpipe = false;          // 'This note halved, next note dotted'
+        bool inverseHornpipe = false;   // 'This note dotted, next note halved'
 
         public int playerID;
         public string playerName; // May be the name of the block, not only players!
@@ -600,6 +601,11 @@ namespace instruments
                 duration /= 2;
                 hornpipe = false;
             }
+            if (inverseHornpipe)
+            {
+                duration += duration / 2f;
+                inverseHornpipe = false;
+            }
 
             // Still not over yet!
             while (CharAvailable(inString, i) && inString[i] == '>')
@@ -608,6 +614,16 @@ namespace instruments
                 // (therefore adds half its current duration to itself)
                 duration += duration / 2f;
                 hornpipe = true;
+                i++;
+            }
+
+            // Still not over yet!
+            while (CharAvailable(inString, i) && inString[i] == '<')
+            {
+                // A > (aka a hornpipe) represents a 'dotted' note
+                // (therefore adds half its current duration to itself)
+                duration /= 2f;
+                inverseHornpipe = true;
                 i++;
             }
 
