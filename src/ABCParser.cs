@@ -1,13 +1,12 @@
 ﻿using System;               // Array.Find()
 using System.Collections.Generic; // List
-using System.Diagnostics;  // Debug todo remove
-using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools; // vec3D
 using Vintagestory.API.Server;
 
-using Instruments.Network.Packets;
 using Instruments.Blocks;
+using Instruments.Core;
+using Instruments.Network.Packets;
 
 /*
  * This file is for the server only.

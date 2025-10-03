@@ -1,5 +1,4 @@
-﻿
-using Vintagestory.API.Client;
+﻿using Vintagestory.API.Client;
 
 namespace Instruments.GUI
 {

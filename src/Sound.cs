@@ -1,10 +1,14 @@
-﻿using ProtoBuf;
-using System; // Random
+﻿using System; // Random
 using System.Collections.Generic;
 using System.Diagnostics;  // Debug todo remove
+
+using ProtoBuf;
+
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Vintagestory.API.MathTools; // vec3D
+using Vintagestory.API.MathTools;
+
+using Instruments.Core;
 
 namespace Instruments
 {

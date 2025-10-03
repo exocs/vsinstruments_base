@@ -1,16 +1,14 @@
-﻿using System;       // Action<>
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics; // debug todo remove
-using System.IO;    // Open files
+using System.IO;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Vintagestory.API.Common.Entities;
-using Vintagestory.API.Config;  // Lang
-using Vintagestory.API.MathTools; // vec3D
-using Vintagestory.API.Util;  // ToolModes
-
-using Instruments.Network.Packets;
+using Vintagestory.API.Config;
+using Vintagestory.API.MathTools;
+using Vintagestory.API.Util;
+using Instruments.Core;
 using Instruments.GUI;
+using Instruments.Network.Packets;
 
 namespace Instruments.Items
 {
