@@ -6,7 +6,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools; // vec3D
 
-namespace instruments
+namespace Instruments
 {
     public class Sound
     {

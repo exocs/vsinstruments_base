@@ -7,7 +7,7 @@ using Vintagestory.API.Config;  // Lang stuff
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;     // GUIHandbook
 
-namespace instruments
+namespace Instruments
 {
     public class NoteGUI : HudElement
     {

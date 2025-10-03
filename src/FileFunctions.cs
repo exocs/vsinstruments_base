@@ -4,7 +4,7 @@ using System.IO; // Open files
 using System.Text; // UTF8 stuff
 
 
-namespace instruments
+namespace Instruments
 {
     public class RecursiveFileProcessor
     {

@@ -11,8 +11,9 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 
+using Instruments.Network.Packets;
 
-namespace instruments
+namespace Instruments
 {
     internal class MusicBlock : Block
     {

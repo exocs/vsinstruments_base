@@ -3,7 +3,7 @@ using System.Linq;
 using Vintagestory.API.Common;
 using System.IO;  // Directory, Path
 
-namespace instruments
+namespace Instruments
 {
     public class InstrumentSettings
     {

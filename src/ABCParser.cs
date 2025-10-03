@@ -6,13 +6,15 @@ using Vintagestory.API.Common;
 using Vintagestory.API.MathTools; // vec3D
 using Vintagestory.API.Server;
 
+using Instruments.Network.Packets;
+
 /*
  * This file is for the server only.
  * It contains all the necessaries for playing an abc file, for a single player.
  * When a band plays, multiple parsers will exist, each with the unique player ID.
  */
 
-namespace instruments
+namespace Instruments
 {
     public enum Accidental
     {

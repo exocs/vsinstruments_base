@@ -9,7 +9,9 @@ using Vintagestory.API.Config; // GlobalConstants
 using Vintagestory.API.MathTools; // vec3D
 using Vintagestory.API.Server;
 
-namespace instruments
+using Instruments.Network.Packets;
+
+namespace Instruments
 {
     public enum PlayMode
     {
@@ -29,61 +31,6 @@ namespace instruments
             this.pitch = p;
         }
     }
-
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class NoteStart
-    {
-        public float pitch;
-        public Vec3d positon;
-        public int ID;
-        public string instrument;
-    }
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class NoteUpdate // Same as NoteStart, any better way to do this?
-    {
-        public float pitch;
-        public Vec3d positon;
-        public int ID;
-    }
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class NoteStop
-    {
-        public int ID;
-    }
-
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class ABCStartFromClient
-    {
-        public string abcData;
-        public string bandName;
-        public string instrument;
-        public bool isServerFile;
-    }
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class ABCStopFromClient
-    {
-        public bool dummy;
-    }
-
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class ABCUpdateFromServer
-    {
-        public Vec3d positon;
-        public Chord newChord;
-        public int fromClientID;
-        public string instrument;
-    }
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class ABCStopFromServer
-    {
-        public int fromClientID;
-    }
-    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class ABCSendSongFromServer
-    {
-        public string abcFilename;
-    }
-
     public class InstrumentModCommon : ModSystem
     {
         protected bool otherPlayerSync = true;
