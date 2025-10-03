@@ -7,6 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="Midi">
+      <HintPath>extern\Midi.dll</HintPath>
+    </Reference>
     <Reference Include="VintagestoryAPI">
       <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
       <Private>false</Private>
