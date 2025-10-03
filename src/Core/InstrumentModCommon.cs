@@ -9,7 +9,7 @@ namespace Instruments.Core
     {
         protected bool otherPlayerSync = true;
         protected bool serversideAnimSync = false;
-        public static InstrumentSettings config;
+        public static InstrumentModSettings config;
 
         public override void Start(ICoreAPI api)
         {
@@ -21,17 +21,17 @@ namespace Instruments.Core
             // Load settings file
             try
             {
-                config = api.LoadModConfig<InstrumentSettings>("instruments.json");
+                config = api.LoadModConfig<InstrumentModSettings>("instruments.json");
                 if (config == null)
                 {
-                    config = new InstrumentSettings();
+                    config = new InstrumentModSettings();
                     api.StoreModConfig(config, "instruments.json");
                 }
             }
             catch (Exception)
             {
                 api.Logger.Error("Could not load instruments config, using default values...");
-                config = new InstrumentSettings();
+                config = new InstrumentModSettings();
             }
         }
     }

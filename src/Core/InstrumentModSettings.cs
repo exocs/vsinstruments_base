@@ -1,11 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Vintagestory.API.Common;
-using System.IO;  // Directory, Path
+﻿using System.IO;
 
-namespace Instruments
+namespace Instruments.Core
 {
-    public class InstrumentSettings
+    public class InstrumentModSettings
     {
         public bool enabled { get; set; } = true;
         public float playerVolume { get; set; } = 0.7f;
