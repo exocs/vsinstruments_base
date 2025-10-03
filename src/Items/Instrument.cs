@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Util;
-using Instruments.Core;
 using Instruments.GUI;
 using Instruments.Network.Packets;
 
@@ -121,7 +119,7 @@ namespace Instruments.Items
                 }
                 else
                 {
-                    if (Definitions.GetInstance().IsPlaying())
+                    if (Definitions.Instance.IsPlaying())
                     {
                         ABCSendStop();
                     }
@@ -188,12 +186,12 @@ namespace Instruments.Items
         public int SetMode(PlayMode newMode)
         {
             //fixme as this is called from a gui, the server does not see this. Need to send a packet to tell the server this. Or, does server even need to run this code?
-            Definitions.GetInstance().SetPlayMode(newMode);
+            Definitions.Instance.SetPlayMode(newMode);
             return 1;
         }
         public void SetBand(string bn)
         {
-            Definitions.GetInstance().SetBandName(bn);
+            Definitions.Instance.SetBandName(bn);
         }
 
         public int PlaySong(string filePath)
@@ -201,7 +199,7 @@ namespace Instruments.Items
             //if(index < abcFiles.Count)
             {
                 string abcData = "";
-                bool abcOK = RecursiveFileProcessor.ReadFile(Definitions.GetInstance().ABCBasePath() + Path.DirectorySeparatorChar + filePath, ref abcData); // Todo don't send the whole thing
+                bool abcOK = RecursiveFileProcessor.ReadFile(Definitions.Instance.ABCBasePath() + Path.DirectorySeparatorChar + filePath, ref abcData); // Todo don't send the whole thing
                 if (abcOK)
                 {
                     ABCSendStart(abcData, false);
@@ -283,7 +281,7 @@ namespace Instruments.Items
                 // TODO if I can be bothered, floor the pitch and map directly to dict instead of using i
                 if (angle < currentStep + step)
                 {
-                    currentNote = Definitions.GetInstance().GetFrequency(i);
+                    currentNote = Definitions.Instance.GetFrequency(i);
                     break;
                 }
                 currentStep += step;
@@ -299,7 +297,7 @@ namespace Instruments.Items
             float currentStep = 1.55858f;
             for (int i = 24; i >= 0; i--)
             {
-                NoteFrequency nf = currentNote = Definitions.GetInstance().GetFrequency(i);
+                NoteFrequency nf = currentNote = Definitions.Instance.GetFrequency(i);
                 if (nf.ID.IndexOf("^") > 0)
                 {
                     continue;
@@ -323,7 +321,7 @@ namespace Instruments.Items
         private bool ToggleGui()
         {
             Action<string> sb = SetBand;
-            ModeSelectGUI modeDialog = new ModeSelectGUI(capi, SetMode, sb, Definitions.GetInstance().GetBandName());
+            ModeSelectGUI modeDialog = new ModeSelectGUI(capi, SetMode, sb, Definitions.Instance.GetBandName());
             modeDialog.TryOpen();
 
             return true;
@@ -340,9 +338,9 @@ namespace Instruments.Items
             capi.Event.AfterActiveSlotChanged -= ChangeFromInstrument;
             holding = false;
             //guiDialog?.TryClose();
-            if (Definitions.GetInstance().IsPlaying())
+            if (Definitions.Instance.IsPlaying())
             {
-                Definitions.GetInstance().SetIsPlaying(false);
+                Definitions.Instance.SetIsPlaying(false);
                 ABCSendStop();
             }
         }
@@ -351,11 +349,11 @@ namespace Instruments.Items
             ABCStartFromClient newABC = new ABCStartFromClient();
             newABC.abcData = fileData;
             newABC.instrument = instrument;
-            newABC.bandName = Definitions.GetInstance().GetBandName();
+            newABC.bandName = Definitions.Instance.GetBandName();
             newABC.isServerFile = isServerOwned;
             IClientNetworkChannel ch = capi.Network.GetChannel("abc");
             ch.SendPacket(newABC);
-            Definitions.GetInstance().SetIsPlaying(true);
+            Definitions.Instance.SetIsPlaying(true);
         }
         private void ABCSendStop()
         {
@@ -367,10 +365,10 @@ namespace Instruments.Items
         private void ABCSongSelect()
         {
             // Load abc folder
-            if (Definitions.GetInstance().UpdateSongList(capi))
+            if (Definitions.Instance.UpdateSongList(capi))
             {
                 Action<string> sb = SetBand;
-                SongSelectGUI songGui = new SongSelectGUI(capi, PlaySong, Definitions.GetInstance().GetSongList(), sb, Definitions.GetInstance().GetBandName());
+                SongSelectGUI songGui = new SongSelectGUI(capi, PlaySong, Definitions.Instance.GetSongList(), sb, Definitions.Instance.GetBandName());
                 songGui.TryOpen();
             }
         }
@@ -388,150 +386,9 @@ namespace Instruments.Items
         {
             instrument = "acousticguitar";
             animation = "holdbothhandslarge";
-            Definitions.GetInstance().AddInstrumentType(instrument, animation);
+            Definitions.Instance.AddInstrumentType(instrument, animation);
             base.OnLoaded(api);
         }
     }
 #endif
-    public class Definitions
-    {
-        private string bandName = "";
-        private PlayMode mode = PlayMode.abc;
-        private static Definitions _instance;
-        private Dictionary<int, NoteFrequency> noteMap = new Dictionary<int, NoteFrequency>();
-        private Dictionary<string, string> animMap = new Dictionary<string, string>();
-        private List<string> abcFiles = new List<string>();
-        private List<string> serverAbcFiles = new List<string>();
-        private bool messageDone = false;
-        private bool abcPlaying = false;
-
-        private Dictionary<string, string> instrumentTypes = new Dictionary<string, string>();
-
-        private Definitions()
-        {
-            // Populate the dict
-            int i = 0;
-            noteMap.Add(i++, new NoteFrequency("a3", 0.5000f));
-            noteMap.Add(i++, new NoteFrequency("a^3", 0.5295f));
-            noteMap.Add(i++, new NoteFrequency("b3", 0.5614f));
-            noteMap.Add(i++, new NoteFrequency("c3", 0.5945f));
-            noteMap.Add(i++, new NoteFrequency("c^3", 0.6300f));
-            noteMap.Add(i++, new NoteFrequency("d3", 0.6672f));
-            noteMap.Add(i++, new NoteFrequency("d^3", 0.7073f));
-            noteMap.Add(i++, new NoteFrequency("e3", 0.7491f));
-            noteMap.Add(i++, new NoteFrequency("f3", 0.7936f));
-            noteMap.Add(i++, new NoteFrequency("f^3", 0.8409f));
-            noteMap.Add(i++, new NoteFrequency("g3", 0.8909f));
-            noteMap.Add(i++, new NoteFrequency("g^3", 0.9441f));
-            noteMap.Add(i++, new NoteFrequency("a4", 1.0000f));
-            noteMap.Add(i++, new NoteFrequency("a^4", 1.0595f));
-            noteMap.Add(i++, new NoteFrequency("b4", 1.1223f));
-            noteMap.Add(i++, new NoteFrequency("c3", 1.1891f));
-            noteMap.Add(i++, new NoteFrequency("c^4", 1.2600f));
-            noteMap.Add(i++, new NoteFrequency("d4", 1.335f));
-            noteMap.Add(i++, new NoteFrequency("d^4", 1.4141f));
-            noteMap.Add(i++, new NoteFrequency("e4", 1.4964f));
-            noteMap.Add(i++, new NoteFrequency("f4", 1.5873f));
-            noteMap.Add(i++, new NoteFrequency("f^4", 1.6818f));
-            noteMap.Add(i++, new NoteFrequency("g4", 1.7818f));
-            noteMap.Add(i++, new NoteFrequency("g^4", 1.8877f));
-            noteMap.Add(i++, new NoteFrequency("a5", 2.0000f));
-
-            instrumentTypes.Add("none", "none");  // Dummy value 
-        }
-        public static Definitions GetInstance()
-        {
-            if (_instance != null)
-                return _instance;
-            return _instance = new Definitions();
-        }
-
-        public void SetBandName(string bn)
-        {
-            bandName = bn;
-        }
-        public string GetBandName()
-        {
-            return bandName;
-        }
-        public void SetPlayMode(PlayMode newMode)
-        {
-            mode = newMode;
-        }
-        public PlayMode GetPlayMode()
-        {
-            return mode;
-        }
-        public NoteFrequency GetFrequency(int index)
-        {
-            return noteMap[index];
-        }
-        public List<string> GetSongList()
-        {
-            return abcFiles;
-        }
-        public string GetAnimation(string type)
-        {
-            return instrumentTypes[type];
-        }
-        public void AddInstrumentType(string type, string anim)
-        {
-            if(!instrumentTypes.ContainsKey(type))
-                instrumentTypes.Add(type, anim);
-        }
-        public Dictionary<string, string> GetInstrumentTypes()
-        {
-            return instrumentTypes;
-        }
-        public bool UpdateSongList(ICoreClientAPI capi)
-        {
-            abcFiles.Clear();
-            // First, check the client's dir exists
-            string localDir = InstrumentModCommon.config.abcLocalLocation;
-            if (RecursiveFileProcessor.DirectoryExists(localDir))
-            {
-                // It exists! Now find the files in it
-                RecursiveFileProcessor.ProcessDirectory(localDir, localDir + Path.DirectorySeparatorChar, ref abcFiles);
-            }
-            else
-            {
-                if (!messageDone)
-                {
-                    // Client ABC folder not found, log a message to tell the player where it should be. But still search the server folder
-                    capi.ShowChatMessage("ABC warning: Could not find folder at \"" + localDir + "\". Displaying server files instead.");
-                    messageDone = true;
-                }
-            }
-            foreach (string song in serverAbcFiles)
-                abcFiles.Add(song);
-
-            if (abcFiles.Count == 0)
-            {
-                capi.ShowChatMessage("ABC error: No abc files found!");
-                return false;
-            }
-            else
-            {
-                return true;
-            }
-        }
-        public void AddToServerSongList(string songFileName)
-        {
-            serverAbcFiles.Add(songFileName);
-        }
-        public string ABCBasePath()
-        {
-            return InstrumentModCommon.config.abcLocalLocation;
-        }
-        public void SetIsPlaying(bool toggle)
-        {
-            abcPlaying = toggle;
-        }
-        public bool IsPlaying() { return abcPlaying; }
-        public void Reset()
-        {
-            abcFiles.Clear();
-            serverAbcFiles.Clear();
-        }
-    }
 }

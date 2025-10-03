@@ -5,7 +5,6 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Instruments.Network.Packets;
 using Instruments.Blocks;
-using Instruments.Items;
 
 namespace Instruments.Core
 {
@@ -60,8 +59,8 @@ namespace Instruments.Core
             soundManagers = new List<SoundManager>();
 
             thisClientPlaying = false;
-            MusicBlockManager.GetInstance().Reset(); // I think there's a manager for both Server and Client, so reset it I guess
-            Definitions.GetInstance().Reset();
+            MusicBlockManager.Instance.Reset(); // I think there's a manager for both Server and Client, so reset it I guess
+            Definitions.Instance.Reset();
 
             clientApi.RegisterCommand("instruments", "instrument playback commands", "[enable|disable]", ParseClientCommand);
             clientSideEnable = true;
@@ -194,7 +193,7 @@ namespace Instruments.Core
             {
                 // Set the animation
                 IPlayer otherPlayer = Array.Find(clientApi.World.AllOnlinePlayers, x => x.ClientId == sm.sourceID);
-                otherPlayer?.Entity?.StartAnimation(Definitions.GetInstance().GetAnimation(serverPacket.instrument));
+                otherPlayer?.Entity?.StartAnimation(Definitions.Instance.GetAnimation(serverPacket.instrument));
             }
             sm.AddChord(serverPacket.positon, serverPacket.newChord);
         }
@@ -211,13 +210,13 @@ namespace Instruments.Core
                 if (sm.sourceID == player.ClientId)
                 {
                     thisClientPlaying = false;
-                    Definitions.GetInstance().SetIsPlaying(false);
-                    //player?.Entity?.StopAnimation(Definitions.GetInstance().GetAnimation(sm.instrument));
+                    Definitions.Instance.SetIsPlaying(false);
+                    //player?.Entity?.StopAnimation(Definitions.Instance.GetAnimation(sm.instrument));
                 }
                 if (otherPlayerSync)
                 {
                     IPlayer otherPlayer = Array.Find(clientApi.World.AllOnlinePlayers, x => x.ClientId == sm.sourceID);
-                    otherPlayer?.Entity?.StopAnimation(Definitions.GetInstance().GetAnimation(sm.instrument));
+                    otherPlayer?.Entity?.StopAnimation(Definitions.Instance.GetAnimation(sm.instrument));
                 }
                 sm.Kill();
                 soundManagers.Remove(sm);
@@ -226,7 +225,7 @@ namespace Instruments.Core
         }
         private void SongFromServer(ABCSendSongFromServer serverPacket)
         {
-            Definitions.GetInstance().AddToServerSongList(serverPacket.abcFilename);
+            Definitions.Instance.AddToServerSongList(serverPacket.abcFilename);
         }
 
         private void OnClientGameTick(float dt)
@@ -297,7 +296,7 @@ namespace Instruments.Core
             // Go through the list of all instruments (in Instrument.cs) and add a sound file location for each entry.
             // Make sure the folder name is exactly the same as in the enum!
             // Have to do this after everything else loads, because it likes to attempt it before when the IntrumentTypes dict is empty.
-            foreach (KeyValuePair<string, string> instrumentType in Definitions.GetInstance().GetInstrumentTypes())
+            foreach (KeyValuePair<string, string> instrumentType in Definitions.Instance.GetInstrumentTypes())
             {
                 string s = "sounds/" + instrumentType.Key;
                 soundLocations.Add(instrumentType.Key, s);

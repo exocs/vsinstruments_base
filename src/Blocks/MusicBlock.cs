@@ -79,7 +79,7 @@ namespace Instruments.Blocks
             base.Initialize(api);
             if (api.Side != EnumAppSide.Server)
                 return;
-            ID = MusicBlockManager.GetInstance().GetNewID();
+            ID = MusicBlockManager.Instance.GetNewID();
             OnSlotModified(0); // Parses the item in the inventory slot
         }
         public override void ToTreeAttributes(ITreeAttribute tree)
@@ -108,16 +108,16 @@ namespace Instruments.Blocks
             base.OnBlockRemoved();
             if (Api.Side != EnumAppSide.Server)
                 return;
-            MusicBlockManager.GetInstance().RemoveID(ID);
+            MusicBlockManager.Instance.RemoveID(ID);
 
             if (isPlaying)
             {
-                ABCParser abcp = ABCParsers.GetInstance().FindByID(ID);
+                ABCParser abcp = ABCParsers.Instance.FindByID(ID);
                 ABCStopFromServer packet = new ABCStopFromServer(); // todo copied from main, make a function
                 packet.fromClientID = ID;
                 IServerNetworkChannel ch = (Api as ICoreServerAPI).Network.GetChannel("abc");
                 ch.BroadcastPacket(packet);
-                ABCParsers.GetInstance().Remove(Api as ICoreServerAPI, null, abcp);
+                ABCParsers.Instance.Remove(Api as ICoreServerAPI, null, abcp);
             }
         }
         public void OnUse(IPlayer byPlayer)
@@ -138,12 +138,12 @@ namespace Instruments.Blocks
                             if (songData == "")  // If songData is still empty, then the song wasn't found (or one wasn't selected)
                                 return;
 
-                            ABCParsers.GetInstance().MakeNewParser(Api as ICoreServerAPI, byPlayer,
+                            ABCParsers.Instance.MakeNewParser(Api as ICoreServerAPI, byPlayer,
                                 songData, ID, blockName, bandName, Pos.ToVec3d() + new Vec3d(0.5, 0, 0.5), instrumentType);
                         }
                         else
                         {
-                            ABCParsers.GetInstance().MakeNewParser(Api as ICoreServerAPI, byPlayer,
+                            ABCParsers.Instance.MakeNewParser(Api as ICoreServerAPI, byPlayer,
                                 songData, ID, blockName, bandName, Pos.ToVec3d() + new Vec3d(0.5, 0, 0.5), instrumentType);
                         }
                     }
@@ -152,12 +152,12 @@ namespace Instruments.Blocks
                 }
                 else
                 {
-                    ABCParser abcp = ABCParsers.GetInstance().FindByID(ID);
+                    ABCParser abcp = ABCParsers.Instance.FindByID(ID);
                     ABCStopFromServer packet = new ABCStopFromServer(); // todo copied from main, make a function
                     packet.fromClientID = ID;
                     IServerNetworkChannel ch = (Api as ICoreServerAPI).Network.GetChannel("abc");
                     ch.BroadcastPacket(packet);
-                    ABCParsers.GetInstance().Remove(Api as ICoreServerAPI, byPlayer, abcp);
+                    ABCParsers.Instance.Remove(Api as ICoreServerAPI, byPlayer, abcp);
                 }
                 isPlaying = !isPlaying;
             }
@@ -271,7 +271,7 @@ namespace Instruments.Blocks
 
                     IClientWorldAccessor clientWorld = (IClientWorldAccessor)Api.World;
 
-                    if (!Definitions.GetInstance().UpdateSongList(Api as ICoreClientAPI))
+                    if (!Definitions.Instance.UpdateSongList(Api as ICoreClientAPI))
                         return;
 
                     if (musicBlockGUI == null)
@@ -311,12 +311,23 @@ namespace Instruments.Blocks
         {
             activeBlockIDs = new List<int>();
         }
+
+        [Obsolete("Use Instance instead!")]
         public static MusicBlockManager GetInstance()
         {
             if (_instance != null)
                 return _instance;
             return _instance = new MusicBlockManager();
         }
+
+        public static MusicBlockManager Instance
+        {
+            get
+            {
+                return _instance != null ? _instance : _instance = new MusicBlockManager();
+            }
+        }
+
         public void Reset()
         {
             activeBlockIDs.Clear();

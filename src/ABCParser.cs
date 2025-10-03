@@ -1055,12 +1055,23 @@ namespace Instruments
         {
             list = new List<ABCParser>();
         }
+
+        [Obsolete("Use Instance instead!")]
         public static ABCParsers GetInstance()
         {
             if (_instance != null)
                 return _instance;
             return _instance = new ABCParsers();
         }
+
+        public static ABCParsers Instance
+        {
+            get
+            {
+                return _instance != null ? _instance : _instance = new ABCParsers();
+            }
+        }
+
         public void SetAPI(ICoreServerAPI newApi)
         {
             api = newApi;

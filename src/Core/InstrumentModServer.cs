@@ -5,7 +5,6 @@ using Vintagestory.API.Server;
 
 using Instruments.Network.Packets;
 using Instruments.Blocks;
-using Instruments.Items;
 
 namespace Instruments.Core
 {
@@ -58,8 +57,8 @@ namespace Instruments.Core
                 ;
 
             serverAPI.Event.RegisterGameTickListener(OnServerGameTick, 1); // arg1 is millisecond Interval
-            MusicBlockManager.GetInstance().Reset();
-            ABCParsers.GetInstance().SetAPI(serverAPI);
+            MusicBlockManager.Instance.Reset();
+            ABCParsers.Instance.SetAPI(serverAPI);
 
             
             serverAPI.Event.PlayerJoin += SendSongs;
@@ -73,7 +72,7 @@ namespace Instruments.Core
                 serverAPI.Event.UnregisterGameTickListener(listenerID);
                 listenerID = 0;
             }
-            ABCParsers.GetInstance().Reset();
+            ABCParsers.Instance.Reset();
         }
         public void SendSongs(IServerPlayer byPlayer)
         {
@@ -114,7 +113,7 @@ namespace Instruments.Core
         }
         private void StartABC(IPlayer fromPlayer, ABCStartFromClient abcData)
         {
-            ABCParser abcp = ABCParsers.GetInstance().FindByID(fromPlayer.ClientId);
+            ABCParser abcp = ABCParsers.Instance.FindByID(fromPlayer.ClientId);
             if (abcp == null)
             {
                 string abcSong = "";
@@ -130,13 +129,13 @@ namespace Instruments.Core
                     abcSong = abcData.abcData;
                 }
 
-                ABCParsers.GetInstance().MakeNewParser(serverAPI, fromPlayer, abcSong, abcData.bandName, abcData.instrument);
+                ABCParsers.Instance.MakeNewParser(serverAPI, fromPlayer, abcSong, abcData.bandName, abcData.instrument);
                 if (serversideAnimSync)
-                    fromPlayer?.Entity?.StartAnimation(Definitions.GetInstance().GetAnimation(abcData.instrument));
+                    fromPlayer?.Entity?.StartAnimation(Definitions.Instance.GetAnimation(abcData.instrument));
             }
             else
             {
-                ABCParsers.GetInstance().Remove(serverAPI, fromPlayer, abcp);
+                ABCParsers.Instance.Remove(serverAPI, fromPlayer, abcp);
             }
             /*
             if (listenerID == -1)
@@ -148,24 +147,24 @@ namespace Instruments.Core
         private void StopABC(IPlayer fromPlayer, ABCStopFromClient abcData)
         {
             int clientID = fromPlayer.ClientId;
-            ABCParser abcp = ABCParsers.GetInstance().FindByID(clientID);
+            ABCParser abcp = ABCParsers.Instance.FindByID(clientID);
             if (abcp != null)
             {
-                ABCParsers.GetInstance().Remove(serverAPI, fromPlayer, abcp);
+                ABCParsers.Instance.Remove(serverAPI, fromPlayer, abcp);
                 ABCStopFromServer packet = new ABCStopFromServer();
                 packet.fromClientID = clientID;
                 IServerNetworkChannel ch = serverAPI.Network.GetChannel("abc");
                 ch.BroadcastPacket(packet);
 
                 if(serversideAnimSync)
-                    fromPlayer?.Entity?.StopAnimation(Definitions.GetInstance().GetAnimation(abcp.instrument));
+                    fromPlayer?.Entity?.StopAnimation(Definitions.Instance.GetAnimation(abcp.instrument));
             }
 
             return;
         }
         private void OnServerGameTick(float dt)
         {
-            ABCParsers.GetInstance().Update(serverAPI, dt);
+            ABCParsers.Instance.Update(serverAPI, dt);
         }
         #endregion
     }

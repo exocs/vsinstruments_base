@@ -3,7 +3,6 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;  // Lang stuff
 using Vintagestory.API.MathTools;
-using Instruments.Items;
 
 namespace Instruments.GUI
 {
@@ -126,7 +125,7 @@ namespace Instruments.GUI
         }
         private bool OnSongSelect()
         {
-            SongSelectGUI songGui = new SongSelectGUI(capi, SetSong, Definitions.GetInstance().GetSongList());
+            SongSelectGUI songGui = new SongSelectGUI(capi, SetSong, Definitions.Instance.GetSongList());
             songGui.TryOpen();
             return true;
         }
@@ -135,7 +134,7 @@ namespace Instruments.GUI
             // Read the selected file, and send the contents to the server
             string songData = "";
             // Try to read the file. If it failed, it's propably a server file, so we should send the filename when starting playback, just as with handheld +.
-            RecursiveFileProcessor.ReadFile(Definitions.GetInstance().ABCBasePath() + Path.DirectorySeparatorChar + filePath, ref songData);
+            RecursiveFileProcessor.ReadFile(Definitions.Instance.ABCBasePath() + Path.DirectorySeparatorChar + filePath, ref songData);
 
             SingleComposer.GetDynamicText("songName").SetNewText("Song File: \n\"" + filePath + "\"");
 
