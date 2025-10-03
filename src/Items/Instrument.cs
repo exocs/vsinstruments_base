@@ -12,7 +12,6 @@ namespace Instruments.Items
 {
     public class InstrumentItem : Item
     {
-        const float PI = 3.14159f;
         private NoteFrequency currentNote;
         private ICoreClientAPI capi;
         bool holding = false;
@@ -255,9 +254,9 @@ namespace Instruments.Items
             // Instead, shift down 1 octave in the lower half, and up 1 in the upper
             float pitch;
             if (angle > halfwayPoint) // bottom half, remember it's inverted!
-                pitch = 2 - angle * (1 / PI);
+                pitch = 2 - angle * (1 / Constants.PI);
             else
-                pitch = 3 - angle * (2 / PI);
+                pitch = 3 - angle * (2 / Constants.PI);
 
             currentNote.pitch = pitch;
             currentNote.ID = "Fluid";
