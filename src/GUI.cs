@@ -5,7 +5,8 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;  // Lang stuff
 using Vintagestory.API.MathTools;
-using Vintagestory.GameContent;     // GUIHandbook
+using Vintagestory.GameContent;
+using Instruments.Items;
 
 namespace Instruments
 {

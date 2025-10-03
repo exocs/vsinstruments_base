@@ -7,6 +7,7 @@ using Vintagestory.API.MathTools; // vec3D
 using Vintagestory.API.Server;
 
 using Instruments.Network.Packets;
+using Instruments.Blocks;
 
 /*
  * This file is for the server only.
