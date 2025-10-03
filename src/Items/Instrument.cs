@@ -10,6 +10,7 @@ using Vintagestory.API.MathTools; // vec3D
 using Vintagestory.API.Util;  // ToolModes
 
 using Instruments.Network.Packets;
+using Instruments.GUI;
 
 namespace Instruments.Items
 {

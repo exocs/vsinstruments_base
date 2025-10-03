@@ -13,6 +13,7 @@ using Vintagestory.GameContent;
 
 using Instruments.Network.Packets;
 using Instruments.Items;
+using Instruments.GUI;
 
 namespace Instruments.Blocks
 {
