@@ -39,7 +39,12 @@ namespace Instruments
         public void StopSound()
         {
             if (sound.IsPlaying)
-                sound.Dispose();
+            { 
+                //sound.Dispose();
+	            // Since sound is a form of energy, abruptly stopping it feels very artifical
+	            // and wrong. Let it fade out in a reasonable time instead. TODO@exocs: Constant?
+	            sound.FadeOutAndStop(1.0f);
+            }
         }
         public void UpdatePosition(Vec3d position)
         {
