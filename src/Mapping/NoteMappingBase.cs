@@ -1,0 +1,78 @@
+using System;
+using Midi;
+
+namespace Instruments.Mapping
+{
+	//
+	// Summary:
+	//     Base of a container that associates value to their note pitch keys.
+	//
+	public abstract class NoteMappingBase<T>
+	{
+		//
+		// Summary:
+		//     Contains single value associated to a pitch and stores its source pitch,
+		//     i.e. the location it was mapped from if not mapped directly.
+		//
+		protected struct Item
+		{
+			public T Value;
+			public Pitch Source;
+
+			public Item(T value, Pitch source)
+			{
+				Value = value;
+				Source = source;
+			}
+		}
+
+		private readonly Item[] entries;
+
+		public NoteMappingBase()
+		{
+			entries = new Item[Constants.Note.Count];
+		}
+
+		protected void Set(Pitch pitch, Pitch samplePitch, T value)
+		{
+			entries[(int)pitch] = new Item(value, samplePitch);
+		}
+
+		protected void Clear()
+		{
+			Array.Clear(entries);
+		}
+
+		protected Item GetItem(Pitch pitch)
+		{
+			return entries[(int)pitch];
+		}
+
+		public T GetValue(Pitch pitch)
+		{
+			return entries[(int)pitch].Value;
+		}
+
+		//
+		// Summary:
+		//     Base for object responsible for building the map from provided cache of items.
+		//
+		public abstract class NoteMapperBase : IDisposable
+		{
+			public abstract bool Add(Pitch pitch, T item);
+			public abstract bool Map(NoteMappingBase<T> destination);
+			public abstract void Dispose();
+
+			protected static void Set(NoteMappingBase<T> destination, int valueIndex, int sampleIndex, T value)
+			{
+				Pitch current = (Pitch)valueIndex;
+				Pitch sample = (Pitch)sampleIndex;
+				destination.Set(current, sample, value);
+			}
+			protected static void Clear(NoteMappingBase<T> destination)
+			{
+				destination.Clear();
+			}
+		}
+	}
+}

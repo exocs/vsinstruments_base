@@ -1,14 +1,13 @@
-﻿using System; // Random
+﻿using Instruments.Core;
+using Instruments.Mapping;
+using Midi;
+using ProtoBuf;
+using System; // Random
 using System.Collections.Generic;
 using System.Diagnostics;  // Debug todo remove
-
-using ProtoBuf;
-
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
-
-using Instruments.Core;
 
 namespace Instruments
 {
@@ -73,6 +72,8 @@ namespace Instruments
         private Dictionary<int, string> drumMap = new Dictionary<int, string>();
         private Dictionary<int, string> octaveMap = new Dictionary<int, string>();
 
+        private NoteMapping<string> noteMap = new NoteMapping<string>();
+
         private float[,] frequencies = new float[7, 3] {
             {0.9441f, 1.0000f, 1.0595f },  // A
             {1.0595f, 1.1223f, 1.1891f },  // B
@@ -99,10 +100,23 @@ namespace Instruments
             octaveMap.Add(i++, "a6");
             octaveMap.Add(i++, "a7");
 
-            // Drum
-            // D1 lowest
-            // E6 highest
-            for (i = 0; i < drumSamples - 1; i++)
+			using (var mapper = new Mapping.Mappers.NoteMapperDistance<string>())
+            {
+			    mapper.Add(Pitch.A0, "a0");
+				mapper.Add(Pitch.A1, "a1");
+				mapper.Add(Pitch.A2, "a2");
+				mapper.Add(Pitch.A3, "a3");
+				mapper.Add(Pitch.A4, "a4");
+				mapper.Add(Pitch.A5, "a5");
+				mapper.Add(Pitch.A6, "a6");
+				mapper.Add(Pitch.A7, "a7");
+				mapper.Map(noteMap);
+			}
+
+			// Drum
+			// D1 lowest
+			// E6 highest
+			for (i = 0; i < drumSamples - 1; i++)
             {
                 int index = i + 26;
                 string s = index + "";
@@ -158,8 +172,8 @@ namespace Instruments
                         foreach (Note note in chordBuffer[i].notes)
                         {
                             bool play = true;
-                            string assetLocation;
-                            float pitch;
+                            string assetLocation = string.Empty;
+                            float pitch = 1.0f;
                             if (instrument == "drum")
                             {
                                 int index = KeyToIndex(note);
@@ -175,13 +189,28 @@ namespace Instruments
                             }
                             else
                             {
-                                pitch = KeyToPitch(note.key, note.accidental);
+                                /*pitch = KeyToPitch(note.key, note.accidental);
                                 if (pitch < 0)
                                 {
                                     pitch = 1;  // Too scared to pass in <0 to Sound()
                                     play = false;
+                                }*/
+
+								// TODO@exocs: Resolve this cleanly, this is compatibility layer
+								if (note.Convert(out Midi.Note midiNote, out Midi.Pitch midiPitch))
+                                {
+									assetLocation = instrumentFileLocation + "/" + noteMap.GetValue(midiPitch);
+									pitch = noteMap.GetRelativePitch(midiPitch);
+                                    play = true;
+								}
+                                else
+                                {
+                                    // hold up is "z" for rest actually.. just spawning a sound instead of waiting?
+                                    assetLocation = instrumentFileLocation + "/" + "a0";
+									pitch = 1.0f;
+                                    play = false;
                                 }
-                                assetLocation = instrumentFileLocation + "/" + octaveMap[note.octave];
+
                                 if (instrument == "mic")
                                 {
                                     Random rnd = new Random();
@@ -206,13 +235,16 @@ namespace Instruments
                                     }
                                 }
                             }
-                            Sound newSound = new Sound(client, sourcePosition, pitch, assetLocation, -1, volume, play);
-                            newSound.endTime = nowTime + note.duration;
-                            if (newSound.sound == null)
-                                Debug.WriteLine("Sound creation failed (abc)!");
-                            else
-                                soundsOngoing.Add(newSound);
-                        }
+
+                            // wa
+
+							Sound newSound = new Sound(client, sourcePosition, pitch, assetLocation, -1, volume, play);
+							newSound.endTime = nowTime + note.duration;
+							if (newSound.sound == null)
+								Debug.WriteLine("Sound creation failed (abc)!");
+							else
+								soundsOngoing.Add(newSound);
+						}
                         chordBuffer.RemoveAt(i);
                         chordCount--;
                         i--;
@@ -388,4 +420,48 @@ namespace Instruments
         public float duration;
         public Accidental accidental;
     }
+
+    [Obsolete("Compatibility layer that should be deleted prior to release!")]
+    public static class NoteCompabilityExtensions
+    {
+		[Obsolete("Compatibility layer that should be deleted prior to release!")]
+		public static bool Convert(this Note @in, out Midi.Note note, out Midi.Pitch pitch)
+        {
+            char letter = char.ToUpper(@in.key);
+			if (letter < 'A' || letter > 'G')
+            {
+                note = default;
+                pitch = default;
+                return false;
+            }
+
+			int getAccidental()
+			{
+				switch (@in.accidental)
+				{
+					case Accidental.natural:
+					case Accidental.accNatural:
+						return Midi.Note.Natural;
+
+					case Accidental.sharp:
+					case Accidental.accSharp:
+						return Midi.Note.Sharp;
+
+					case Accidental.flat:
+					case Accidental.accFlat:
+						return Midi.Note.Flat;
+
+					default:
+						throw new NotImplementedException();
+				}
+			}
+            int accidental = getAccidental();
+
+            note = new Midi.Note(letter, accidental);
+            pitch = note.PitchInOctave(@in.octave);
+
+			//pitch = (Pitch)((@in.octave + 1) * Constants.Note.OctaveLength) + note.PositionInOctave;
+			return true;
+		}
+	}
 }

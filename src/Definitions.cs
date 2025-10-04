@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using Vintagestory.API.Client;
 using Instruments.Core;
+using Midi;
+using Note = Midi.Note;
 
 namespace Instruments
 {
@@ -11,7 +13,7 @@ namespace Instruments
 		private string bandName = "";
 		private PlayMode mode = PlayMode.abc;
 		private static Definitions _instance;
-		private Dictionary<int, NoteFrequency> noteMap = new Dictionary<int, NoteFrequency>();
+		//private Dictionary<int, NoteFrequency> noteMap = new Dictionary<int, NoteFrequency>();
 		private Dictionary<string, string> animMap = new Dictionary<string, string>();
 		private List<string> abcFiles = new List<string>();
 		private List<string> serverAbcFiles = new List<string>();
@@ -23,7 +25,7 @@ namespace Instruments
 		private Definitions()
 		{
 			// Populate the dict
-			int i = 0;
+			/*int i = 0;
 			noteMap.Add(i++, new NoteFrequency("a3", 0.5000f));
 			noteMap.Add(i++, new NoteFrequency("a^3", 0.5295f));
 			noteMap.Add(i++, new NoteFrequency("b3", 0.5614f));
@@ -48,7 +50,7 @@ namespace Instruments
 			noteMap.Add(i++, new NoteFrequency("f^4", 1.6818f));
 			noteMap.Add(i++, new NoteFrequency("g4", 1.7818f));
 			noteMap.Add(i++, new NoteFrequency("g^4", 1.8877f));
-			noteMap.Add(i++, new NoteFrequency("a5", 2.0000f));
+			noteMap.Add(i++, new NoteFrequency("a5", 2.0000f));*/
 
 			instrumentTypes.Add("none", "none");  // Dummy value 
 		}
@@ -85,9 +87,12 @@ namespace Instruments
 		{
 			return mode;
 		}
+		[Obsolete("Use Pitch and its extension API instead!", false)]
 		public NoteFrequency GetFrequency(int index)
 		{
-			return noteMap[index];
+			Pitch pitch = Pitch.A3 + index;
+			Midi.Note note = pitch.NotePreferringSharps();
+			return new NoteFrequency(note.ToString(), pitch.Frequency() / Pitch.A3.Frequency());
 		}
 		public List<string> GetSongList()
 		{

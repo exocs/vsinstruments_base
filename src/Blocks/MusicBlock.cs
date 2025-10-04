@@ -193,7 +193,7 @@ namespace Instruments.Blocks
                 inventory.InvNetworkUtil.HandleClientPacket(fromPlayer, packetid, data);
             }
 
-            if (packetid == 1004) // Name change
+            if (packetid == Constants.Packet.NameChangeID) // Name change
             {
                 if (data != null)
                 {
@@ -212,7 +212,7 @@ namespace Instruments.Blocks
                 }
             }
 
-            if (packetid == 1005) // Band change
+            if (packetid == Constants.Packet.BandChangeID) // Band change
             {
                 if (data != null)
                 {
@@ -231,7 +231,7 @@ namespace Instruments.Blocks
                 }
             }
 
-            if (packetid == 1006) // Song select
+            if (packetid == Constants.Packet.SongSelectID) // Song select
             {
                 if (data != null)
                 {

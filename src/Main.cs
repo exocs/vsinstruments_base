@@ -1,4 +1,6 @@
-﻿namespace Instruments
+﻿using System;
+
+namespace Instruments
 {
     public enum PlayMode
     {
@@ -8,7 +10,8 @@
         abc         // Playing an abc file
     }
 
-    public struct NoteFrequency
+	[Obsolete("Do not pass notes as string, use Midi.Note or Midi.Pitch instead!")]
+	public struct NoteFrequency
     {
         public string ID;
         public float pitch;

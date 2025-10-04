@@ -7,12 +7,14 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Util;
 using Instruments.GUI;
 using Instruments.Network.Packets;
+using Midi;
 
 namespace Instruments.Items
 {
     public class InstrumentItem : Item
     {
         private NoteFrequency currentNote;
+
         private ICoreClientAPI capi;
         bool holding = false;
         public string instrument = "none";
@@ -254,9 +256,9 @@ namespace Instruments.Items
             // Instead, shift down 1 octave in the lower half, and up 1 in the upper
             float pitch;
             if (angle > halfwayPoint) // bottom half, remember it's inverted!
-                pitch = 2 - angle * (1 / Constants.PI);
+                pitch = 2 - angle * (1 / Constants.Math.PI);
             else
-                pitch = 3 - angle * (2 / Constants.PI);
+                pitch = 3 - angle * (2 / Constants.Math.PI);
 
             currentNote.pitch = pitch;
             currentNote.ID = "Fluid";
@@ -281,7 +283,7 @@ namespace Instruments.Items
                 if (angle < currentStep + step)
                 {
                     currentNote = Definitions.Instance.GetFrequency(i);
-                    break;
+					break;
                 }
                 currentStep += step;
             }
@@ -297,7 +299,10 @@ namespace Instruments.Items
             for (int i = 24; i >= 0; i--)
             {
                 NoteFrequency nf = currentNote = Definitions.Instance.GetFrequency(i);
-                if (nf.ID.IndexOf("^") > 0)
+                int position = 0;
+                Midi.Note note = Midi.Note.ParseNote(nf.ID, ref position);
+               // if (nf.ID.IndexOf("^") > 0)
+               if (note.Accidental == Midi.Note.Sharp)
                 {
                     continue;
                 }
