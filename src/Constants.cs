@@ -14,6 +14,7 @@ namespace Instruments
 		{
 			public const int Count = (int)Pitch.G9;
 			public const int OctaveLength = (int)Pitch.C0 - (int)Pitch.CNeg1;
+			public const int OctaveCount = Count / OctaveLength;
 		}
 
 		public struct Packet
