@@ -50,6 +50,7 @@
   <None Remove="extern\Midi\MidiExamples\**" />
   <None Remove="extern\Midi\MidiUnitTests\**" />
   <None Remove="extern\Midi\Midi\docs\**" />
+  <None Remove="extern\Midi\Midi\Midi.ndoc" />
   <Content Include="modinfo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </Content>
