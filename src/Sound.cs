@@ -100,7 +100,7 @@ namespace Instruments
             octaveMap.Add(i++, "a6");
             octaveMap.Add(i++, "a7");
 
-			using (var mapper = new Mapping.Mappers.NoteMapperDistance<string>())
+            using (var mapper = new Mapping.Mappers.NoteMapperOctave<string>(Pitch.A0))
             {
 			    mapper.Add(Pitch.A0, "a0");
 				mapper.Add(Pitch.A1, "a1");
@@ -196,7 +196,13 @@ namespace Instruments
                                     play = false;
                                 }*/
 
-								// TODO@exocs: Resolve this cleanly, this is compatibility layer
+                                // TODO@exocs: Resolve this cleanly, this is compatibility layer
+
+                                //float pitch = KeyToPitch(note.key, note.accidental);
+
+                                float pitchX = KeyToPitch(note.key, note.accidental);
+                                string sampleX = octaveMap[note.octave];
+
 								if (note.Convert(out Midi.Note midiNote, out Midi.Pitch midiPitch))
                                 {
 									assetLocation = instrumentFileLocation + "/" + noteMap.GetValue(midiPitch);
