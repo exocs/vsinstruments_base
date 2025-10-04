@@ -13,7 +13,6 @@ namespace Instruments
 		private string bandName = "";
 		private PlayMode mode = PlayMode.abc;
 		private static Definitions _instance;
-		//private Dictionary<int, NoteFrequency> noteMap = new Dictionary<int, NoteFrequency>();
 		private Dictionary<string, string> animMap = new Dictionary<string, string>();
 		private List<string> abcFiles = new List<string>();
 		private List<string> serverAbcFiles = new List<string>();

@@ -35,7 +35,7 @@ namespace Instruments.Core
             serverAPI = api;
             base.StartServerSide(api);
             serverChannelNote =
-                api.Network.RegisterChannel("noteTest")
+                api.Network.RegisterChannel(Constants.Channel.Note)
                 .RegisterMessageType(typeof(NoteStart))
                 .RegisterMessageType(typeof(NoteUpdate))
                 .RegisterMessageType(typeof(NoteStop))
@@ -44,7 +44,7 @@ namespace Instruments.Core
                 .SetMessageHandler<NoteStop>(RelayStopNote)
                 ;
             serverChannelABC =
-                api.Network.RegisterChannel("abc")
+                api.Network.RegisterChannel(Constants.Channel.Abc)
                 .RegisterMessageType(typeof(ABCStartFromClient))
                 .RegisterMessageType(typeof(ABCStopFromClient))
                 .RegisterMessageType(typeof(ABCUpdateFromServer))
@@ -153,7 +153,7 @@ namespace Instruments.Core
                 ABCParsers.Instance.Remove(serverAPI, fromPlayer, abcp);
                 ABCStopFromServer packet = new ABCStopFromServer();
                 packet.fromClientID = clientID;
-                IServerNetworkChannel ch = serverAPI.Network.GetChannel("abc");
+                IServerNetworkChannel ch = serverAPI.Network.GetChannel(Constants.Channel.Abc);
                 ch.BroadcastPacket(packet);
 
                 if(serversideAnimSync)

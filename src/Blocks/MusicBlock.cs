@@ -115,7 +115,7 @@ namespace Instruments.Blocks
                 ABCParser abcp = ABCParsers.Instance.FindByID(ID);
                 ABCStopFromServer packet = new ABCStopFromServer(); // todo copied from main, make a function
                 packet.fromClientID = ID;
-                IServerNetworkChannel ch = (Api as ICoreServerAPI).Network.GetChannel("abc");
+                IServerNetworkChannel ch = (Api as ICoreServerAPI).Network.GetChannel(Constants.Channel.Abc);
                 ch.BroadcastPacket(packet);
                 ABCParsers.Instance.Remove(Api as ICoreServerAPI, null, abcp);
             }
@@ -155,7 +155,7 @@ namespace Instruments.Blocks
                     ABCParser abcp = ABCParsers.Instance.FindByID(ID);
                     ABCStopFromServer packet = new ABCStopFromServer(); // todo copied from main, make a function
                     packet.fromClientID = ID;
-                    IServerNetworkChannel ch = (Api as ICoreServerAPI).Network.GetChannel("abc");
+                    IServerNetworkChannel ch = (Api as ICoreServerAPI).Network.GetChannel(Constants.Channel.Abc);
                     ch.BroadcastPacket(packet);
                     ABCParsers.Instance.Remove(Api as ICoreServerAPI, byPlayer, abcp);
                 }

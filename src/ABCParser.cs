@@ -434,7 +434,7 @@ namespace Instruments
                 packet.positon = position;
                 packet.fromClientID = playerID;
                 packet.instrument = instrument;
-                IServerNetworkChannel ch = serverAPI.Network.GetChannel("abc");
+                IServerNetworkChannel ch = serverAPI.Network.GetChannel(Constants.Channel.Abc);
                 ch.BroadcastPacket(packet);
             }
             chordStartTime += nextChordDuration;
@@ -1103,7 +1103,7 @@ namespace Instruments
                     // TODO copied from in instrument. Make into a single function pls
                     ABCStopFromServer packet = new ABCStopFromServer(); // todo copied from main, make a function
                     packet.fromClientID = abcp.playerID;
-                    IServerNetworkChannel ch = api.Network.GetChannel("abc");
+                    IServerNetworkChannel ch = api.Network.GetChannel(Constants.Channel.Abc);
                     ch.BroadcastPacket(packet);
 
                     if (!abcp.isPlayer)

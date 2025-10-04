@@ -115,7 +115,7 @@ namespace Instruments.Items
                     newNote.pitch = currentNote.pitch;
                     newNote.positon = pos;
                     newNote.instrument = instrument;
-                    IClientNetworkChannel ch = capi.Network.GetChannel("noteTest");
+                    IClientNetworkChannel ch = capi.Network.GetChannel(Constants.Channel.Note);
                     ch.SendPacket(newNote);
                 }
                 else
@@ -151,7 +151,7 @@ namespace Instruments.Items
                     NoteUpdate newNote = new NoteUpdate();
                     newNote.pitch = currentNote.pitch;
                     newNote.positon = pos;
-                    IClientNetworkChannel ch = capi.Network.GetChannel("noteTest");
+                    IClientNetworkChannel ch = capi.Network.GetChannel(Constants.Channel.Note);
                     ch.SendPacket(newNote);
                 }
             }
@@ -168,7 +168,7 @@ namespace Instruments.Items
                 if (GetPlayMode(slot) != PlayMode.abc)
                 {
                     NoteStop newNote = new NoteStop();
-                    IClientNetworkChannel ch = capi.Network.GetChannel("noteTest");
+                    IClientNetworkChannel ch = capi.Network.GetChannel(Constants.Channel.Note);
                     ch.SendPacket(newNote);
                 }
             }
@@ -355,14 +355,14 @@ namespace Instruments.Items
             newABC.instrument = instrument;
             newABC.bandName = Definitions.Instance.GetBandName();
             newABC.isServerFile = isServerOwned;
-            IClientNetworkChannel ch = capi.Network.GetChannel("abc");
+            IClientNetworkChannel ch = capi.Network.GetChannel(Constants.Channel.Abc);
             ch.SendPacket(newABC);
             Definitions.Instance.SetIsPlaying(true);
         }
         private void ABCSendStop()
         {
             ABCStopFromClient newABC = new ABCStopFromClient();
-            IClientNetworkChannel ch = capi.Network.GetChannel("abc");
+            IClientNetworkChannel ch = capi.Network.GetChannel(Constants.Channel.Abc);
             ch.SendPacket(newABC);
         }
 

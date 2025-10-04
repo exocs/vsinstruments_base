@@ -36,7 +36,7 @@ namespace Instruments.Core
             clientApi = api;
             //base.StartClientSide(api);
             clientChannelNote =
-                api.Network.RegisterChannel("noteTest")
+                api.Network.RegisterChannel(Constants.Channel.Note)
                 .RegisterMessageType(typeof(NoteStart))
                 .RegisterMessageType(typeof(NoteUpdate))
                 .RegisterMessageType(typeof(NoteStop))
@@ -45,7 +45,7 @@ namespace Instruments.Core
                 .SetMessageHandler<NoteStop>(StopNote)
                 ;
             clientChannelABC =
-                api.Network.RegisterChannel("abc")
+                api.Network.RegisterChannel(Constants.Channel.Abc)
                 .RegisterMessageType(typeof(ABCStartFromClient))    // This needs to be here, even if there's no Message Handler
                 .RegisterMessageType(typeof(ABCStopFromClient))     // I guess it's in order for the client to send stuff up to server, and below stuff is for receiving
                 .RegisterMessageType(typeof(ABCUpdateFromServer))
@@ -252,7 +252,7 @@ namespace Instruments.Core
                 {
                     // TODO copied from in instrument. Make into a single function pls
                     ABCStopFromClient newABC = new ABCStopFromClient();
-                    IClientNetworkChannel ch = clientApi.Network.GetChannel("abc");
+                    IClientNetworkChannel ch = clientApi.Network.GetChannel(Constants.Channel.Abc);
                     ch.SendPacket(newABC);
                     thisClientPlaying = false;
                 }

@@ -24,6 +24,13 @@ namespace Instruments
 			public const int BandChangeID = 1005;
 			public const int SongSelectID = 1006;
 		}
+
+		public struct Channel
+		{
+			public const string Note = "noteTest";
+
+			public const string Abc = "abc";
+		}
 	}
 
 	/*
