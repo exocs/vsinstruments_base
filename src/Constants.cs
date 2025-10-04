@@ -26,6 +26,7 @@ namespace Instruments
 		}
 	}
 
+	/*
 	static class NoteExtensions
 	{
 		private static readonly float[] FrequencyTable = new float[]
@@ -49,4 +50,5 @@ namespace Instruments
 			return FrequencyTable[(int)pitch];
 		}
 	}
+	*/
 }

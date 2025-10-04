@@ -4,7 +4,7 @@ using System.IO;
 using Vintagestory.API.Client;
 using Instruments.Core;
 using Midi;
-using Note = Midi.Note;
+using Instruments.Mapping;
 
 namespace Instruments
 {
@@ -92,7 +92,7 @@ namespace Instruments
 		{
 			Pitch pitch = Pitch.A3 + index;
 			Midi.Note note = pitch.NotePreferringSharps();
-			return new NoteFrequency(note.ToString(), pitch.Frequency() / Pitch.A3.Frequency());
+			return new NoteFrequency(note.ToString(), pitch.RelativePitch(Pitch.A3));
 		}
 		public List<string> GetSongList()
 		{
