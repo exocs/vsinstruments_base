@@ -35,16 +35,21 @@
       <HintPath>$(VINTAGE_STORY)/Lib/protobuf-net.dll</HintPath>
       <Private>False</Private>
     </Reference>
-	<Reference Include="Midi">
-      <HintPath>extern\Midi.dll</HintPath>
-	  <Private>False</Private>
-    </Reference>
   </ItemGroup>
 
 <ItemGroup>
   <Content Include="assets\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </Content>
+  <Compile Remove="extern\Midi\MidiExamples\**" />
+  <Compile Remove="extern\Midi\MidiUnitTests\**" />
+  <Compile Remove="extern\Midi\Midi\docs\**" />
+  <EmbeddedResource Remove="extern\Midi\MidiExamples\**" />
+  <EmbeddedResource Remove="extern\Midi\MidiUnitTests\**" />
+  <EmbeddedResource Remove="extern\Midi\Midi\docs\**" />
+  <None Remove="extern\Midi\MidiExamples\**" />
+  <None Remove="extern\Midi\MidiUnitTests\**" />
+  <None Remove="extern\Midi\Midi\docs\**" />
   <Content Include="modinfo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </Content>

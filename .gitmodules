@@ -1,0 +1,3 @@
+[submodule "extern/Midi"]
+	path = extern/Midi
+	url = https://github.com/exocs/midi-dot-net
