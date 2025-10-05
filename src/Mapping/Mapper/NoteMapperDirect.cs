@@ -8,7 +8,6 @@ namespace Instruments.Mapping.Mappers
 	// Summary:
 	//     This object creates mapping that will only map direct entries.
 	//     Unassigned entries remain uninitialized (assigned to default value)
-	//
 	public sealed class NoteMapperDirect<T> : NoteMappingBase<T>.NoteMapperBase
 	{
 #nullable enable

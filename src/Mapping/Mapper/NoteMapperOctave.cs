@@ -8,7 +8,6 @@ namespace Instruments.Mapping.Mappers
 	//     This object creates mapping that will use a single pitch sample
 	//     from each provided octave to fill the rest of the octave.
 	//     Octaves with no samples will remain unassigned.
-	//
 	public sealed class NoteMapperOctave<T> : NoteMappingBase<T>.NoteMapperBase
 	{
 #nullable enable

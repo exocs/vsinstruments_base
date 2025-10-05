@@ -7,7 +7,6 @@ namespace Instruments.Mapping.Mappers
 	// Summary:
 	//     This object creates mapping that will replace empty items with
 	//     nearest non-empty items based on their distance.
-	//
 	public sealed class NoteMapperDistance<T> : NoteMappingBase<T>.NoteMapperBase
 	{
 #nullable enable

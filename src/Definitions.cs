@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using Vintagestory.API.Client;
-using Instruments.Core;
 using Midi;
+using Instruments.Core;
+using Instruments.Items;
 using Instruments.Mapping;
 
 namespace Instruments
@@ -18,40 +19,9 @@ namespace Instruments
 		private List<string> serverAbcFiles = new List<string>();
 		private bool messageDone = false;
 		private bool abcPlaying = false;
-
-		private Dictionary<string, string> instrumentTypes = new Dictionary<string, string>();
-
+		
 		private Definitions()
 		{
-			// Populate the dict
-			/*int i = 0;
-			noteMap.Add(i++, new NoteFrequency("a3", 0.5000f));
-			noteMap.Add(i++, new NoteFrequency("a^3", 0.5295f));
-			noteMap.Add(i++, new NoteFrequency("b3", 0.5614f));
-			noteMap.Add(i++, new NoteFrequency("c3", 0.5945f));
-			noteMap.Add(i++, new NoteFrequency("c^3", 0.6300f));
-			noteMap.Add(i++, new NoteFrequency("d3", 0.6672f));
-			noteMap.Add(i++, new NoteFrequency("d^3", 0.7073f));
-			noteMap.Add(i++, new NoteFrequency("e3", 0.7491f));
-			noteMap.Add(i++, new NoteFrequency("f3", 0.7936f));
-			noteMap.Add(i++, new NoteFrequency("f^3", 0.8409f));
-			noteMap.Add(i++, new NoteFrequency("g3", 0.8909f));
-			noteMap.Add(i++, new NoteFrequency("g^3", 0.9441f));
-			noteMap.Add(i++, new NoteFrequency("a4", 1.0000f));
-			noteMap.Add(i++, new NoteFrequency("a^4", 1.0595f));
-			noteMap.Add(i++, new NoteFrequency("b4", 1.1223f));
-			noteMap.Add(i++, new NoteFrequency("c3", 1.1891f));
-			noteMap.Add(i++, new NoteFrequency("c^4", 1.2600f));
-			noteMap.Add(i++, new NoteFrequency("d4", 1.335f));
-			noteMap.Add(i++, new NoteFrequency("d^4", 1.4141f));
-			noteMap.Add(i++, new NoteFrequency("e4", 1.4964f));
-			noteMap.Add(i++, new NoteFrequency("f4", 1.5873f));
-			noteMap.Add(i++, new NoteFrequency("f^4", 1.6818f));
-			noteMap.Add(i++, new NoteFrequency("g4", 1.7818f));
-			noteMap.Add(i++, new NoteFrequency("g^4", 1.8877f));
-			noteMap.Add(i++, new NoteFrequency("a5", 2.0000f));*/
-
-			instrumentTypes.Add("none", "none");  // Dummy value 
 		}
 
 		[Obsolete("Use Instance instead!")]
@@ -97,18 +67,11 @@ namespace Instruments
 		{
 			return abcFiles;
 		}
+		[Obsolete("Use InstrumentItemType API instead!")]
 		public string GetAnimation(string type)
 		{
-			return instrumentTypes[type];
-		}
-		public void AddInstrumentType(string type, string anim)
-		{
-			if (!instrumentTypes.ContainsKey(type))
-				instrumentTypes.Add(type, anim);
-		}
-		public Dictionary<string, string> GetInstrumentTypes()
-		{
-			return instrumentTypes;
+			InstrumentItemType itemType = InstrumentItemType.Find(type);
+			return itemType != null ? itemType.Animation : "None";
 		}
 		public bool UpdateSongList(ICoreClientAPI capi)
 		{

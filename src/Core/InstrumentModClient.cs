@@ -5,6 +5,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Instruments.Network.Packets;
 using Instruments.Blocks;
+using Instruments.Items;
 
 namespace Instruments.Core
 {
@@ -26,8 +27,6 @@ namespace Instruments.Core
         bool clientSideEnable;
         bool clientSideReady = false;
         bool setupDone = false;
-
-        private Dictionary<string, string> soundLocations = new Dictionary<string, string>();
 
 
         long listenerIDClient = -1;
@@ -129,7 +128,7 @@ namespace Instruments.Core
                 }
             }
             IClientWorldAccessor clientWorldAccessor = clientApi.World;
-            Sound sound = new Sound(clientWorldAccessor, note.positon, note.pitch, soundLocations[note.instrument] + noteString, note.ID, config.playerVolume);
+            Sound sound = new Sound(clientWorldAccessor, note.positon, note.pitch, string.Empty, note.ID, config.playerVolume);
             if (sound.sound == null)
                 Debug.WriteLine("Sound creation failed!");
             else
@@ -160,8 +159,12 @@ namespace Instruments.Core
             IClientPlayer player = clientApi.World.Player; // If the client is still starting up, this will be null!
             if (player == null)
                 return;
-            if (serverPacket.instrument == "" || serverPacket.instrument == "none")  // An invalid instrument was used, was the instrument pack removed?
+
+			InstrumentItemType instrumentType = InstrumentItemType.Find(serverPacket.InstrumentTypeID);
+            if (instrumentType == null || instrumentType.IsDefault)
                 return;
+            //if (serverPacket.instrument == "" || serverPacket.instrument == "none")  // An invalid instrument was used, was the instrument pack removed?
+            //    return;
 
             if (!clientSideEnable)
                 return;
@@ -176,7 +179,7 @@ namespace Instruments.Core
             {
                 // This was the first packet from the server with data from this client. Need to register a new SoundManager.
                 float startTime = serverPacket.newChord.startTime;
-                sm = new SoundManager(clientApi.World, serverPacket.fromClientID, soundLocations[serverPacket.instrument], serverPacket.instrument, startTime);
+                sm = new SoundManager(clientApi.World, serverPacket.fromClientID, instrumentType, startTime);
                 soundManagers.Add(sm);
             }
             if (listenerIDClient == -1)
@@ -192,8 +195,8 @@ namespace Instruments.Core
             if (otherPlayerSync)
             {
                 // Set the animation
-                IPlayer otherPlayer = Array.Find(clientApi.World.AllOnlinePlayers, x => x.ClientId == sm.sourceID);
-                otherPlayer?.Entity?.StartAnimation(Definitions.Instance.GetAnimation(serverPacket.instrument));
+                IPlayer otherPlayer = Array.Find(clientApi.World.AllOnlinePlayers, x => x.ClientId == sm.sourceID);				
+				otherPlayer?.Entity?.StartAnimation(instrumentType.Animation);
             }
             sm.AddChord(serverPacket.positon, serverPacket.newChord);
         }
@@ -216,7 +219,7 @@ namespace Instruments.Core
                 if (otherPlayerSync)
                 {
                     IPlayer otherPlayer = Array.Find(clientApi.World.AllOnlinePlayers, x => x.ClientId == sm.sourceID);
-                    otherPlayer?.Entity?.StopAnimation(Definitions.Instance.GetAnimation(sm.instrument));
+                    otherPlayer?.Entity?.StopAnimation(sm.InstrumentType.Animation);
                 }
                 sm.Kill();
                 soundManagers.Remove(sm);
@@ -296,11 +299,11 @@ namespace Instruments.Core
             // Go through the list of all instruments (in Instrument.cs) and add a sound file location for each entry.
             // Make sure the folder name is exactly the same as in the enum!
             // Have to do this after everything else loads, because it likes to attempt it before when the IntrumentTypes dict is empty.
-            foreach (KeyValuePair<string, string> instrumentType in Definitions.Instance.GetInstrumentTypes())
-            {
-                string s = "sounds/" + instrumentType.Key;
-                soundLocations.Add(instrumentType.Key, s);
-            }
+            //foreach (KeyValuePair<string, string> instrumentType in Definitions.Instance.GetInstrumentTypes())
+            //{
+             //   string s = "sounds/" + instrumentType.Key;
+              //  soundLocations.Add(instrumentType.Key, s);
+            // }
             setupDone = true;
         }
 

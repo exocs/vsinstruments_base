@@ -9,6 +9,9 @@ namespace Instruments.Network.Packets
 		public Vec3d positon;
 		public Chord newChord;
 		public int fromClientID;
-		public string instrument;
+		//
+		// Summary:
+		//     Unique identifier of the associated instrument type. See also InstrumentItemType.
+		public int InstrumentTypeID;
 	}
 }

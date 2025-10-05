@@ -2,6 +2,7 @@
 using Vintagestory.API.Common;
 
 using Instruments.Blocks;
+using Instruments.Items;
 
 namespace Instruments.Core
 {
@@ -34,5 +35,18 @@ namespace Instruments.Core
                 config = new InstrumentModSettings();
             }
         }
-    }
+
+		public override void AssetsLoaded(ICoreAPI api)
+		{
+			// Initialize all instrument types, these serve as a shared common
+			// storage for all properties of a single instrument kind.
+			InstrumentItemType.InitializeTypes(api);
+		}
+
+		public override void Dispose()
+		{
+			InstrumentItemType.CleanupTypes();
+			base.Dispose();
+		}
+	}
 }

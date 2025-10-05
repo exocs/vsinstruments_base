@@ -7,6 +7,8 @@ using Vintagestory.API.Server;
 using Instruments.Blocks;
 using Instruments.Core;
 using Instruments.Network.Packets;
+using Instruments.Items;
+using Vintagestory.API.Common.Entities;
 
 /*
  * This file is for the server only.
@@ -422,19 +424,25 @@ namespace Instruments
                 }
                 chordBuffer.Add(nextChord);
 
+                Entity playerEntity = null;
                 if (isPlayer)
                 {
                     IPlayer player = Array.Find(serverAPI.World.AllOnlinePlayers, x => x.ClientId == playerID);
-                    if(player != null)
+                    if (player != null)
+                    {
                         position = new Vec3d(player.Entity.Pos.X, player.Entity.Pos.Y, player.Entity.Pos.Z);
+                        playerEntity = player.Entity;
+					}
                 }
 
                 ABCUpdateFromServer packet = new ABCUpdateFromServer();
                 packet.newChord = nextChord;
                 packet.positon = position;
                 packet.fromClientID = playerID;
-                packet.instrument = instrument;
-                IServerNetworkChannel ch = serverAPI.Network.GetChannel(Constants.Channel.Abc);
+                // TODO@exocs: Block and similar will require their own type.
+                InstrumentItem item = InstrumentItem.GetEntityInstrument(playerEntity);
+                packet.InstrumentTypeID = item != null ? item.InstrumentTypeID : -1;
+				IServerNetworkChannel ch = serverAPI.Network.GetChannel(Constants.Channel.Abc);
                 ch.BroadcastPacket(packet);
             }
             chordStartTime += nextChordDuration;
