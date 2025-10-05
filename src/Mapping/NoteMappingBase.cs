@@ -87,7 +87,7 @@ namespace Instruments.Mapping
 		//     Computes the pitch modulation necessary for the provided note pitch,
 		//     considering its source pitch as reference.
 		//
-		public static float ComputePitch(Pitch target, Pitch source)
+		public static float ComputeRelativePitch(Pitch target, Pitch source)
 		{
 			// See Equal Temperament for reference,
 			// in short each semitone = ×2^(1/12).
@@ -116,7 +116,7 @@ namespace Instruments.Mapping
 		//
 		public static float RelativePitch(this Pitch source, Pitch target)
 		{
-			return ComputePitch(target, source);
+			return ComputeRelativePitch(target, source);
 		}
 	}
 }

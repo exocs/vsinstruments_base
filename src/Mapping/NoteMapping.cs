@@ -1,4 +1,3 @@
-using System;
 using Midi;
 
 namespace Instruments.Mapping
@@ -23,7 +22,7 @@ namespace Instruments.Mapping
 		public float GetRelativePitch(Pitch target)
 		{
 			Pitch source = GetItem(target).Source;
-			return NoteMappingUtility.ComputePitch(target, source);
+			return NoteMappingUtility.ComputeRelativePitch(target, source);
 		}
 	}
 }
