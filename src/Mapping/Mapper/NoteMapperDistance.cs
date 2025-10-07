@@ -17,7 +17,7 @@ namespace Instruments.Mapping.Mappers
 			// Pre-allocate space for all items, null entries
 			// represent missing items that will be remapped
 			// to existing entries with modulated pitch
-			values = new T?[Constants.Note.Count];
+			values = new T?[Constants.Note.NoteCount];
 		}
 
 		public override bool Add(Pitch pitch, T value)
@@ -52,14 +52,14 @@ namespace Instruments.Mapping.Mappers
 			{
 				if (start == null) return null;
 
-				for (int i = start.Value + 1; i < Constants.Note.Count; ++i)
+				for (int i = start.Value + 1; i < Constants.Note.NoteCount; ++i)
 				{
 					if (values[i] != null)
 						return i;
 				}
 				return null;
 			}
-			void fill(int? lo, int? hi, int length = Constants.Note.Count)
+			void fill(int? lo, int? hi, int length = Constants.Note.NoteCount)
 			{
 				if (!lo.HasValue && hi.HasValue)
 				{

@@ -19,7 +19,7 @@ namespace Instruments.Mapping.Mappers
 			// Pre-allocate space for all items, null entries
 			// represent missing items that will be remapped
 			// to existing entries with modulated pitch
-			_values = new T?[Constants.Note.Count];
+			_values = new T?[Constants.Note.NoteCount];
 			_pitch = pitch;
 		}
 

@@ -16,7 +16,7 @@ namespace Instruments.Mapping.Mappers
 
 		public NoteMapperDirect()
 		{
-			values = new T?[Constants.Note.Count];
+			values = new T?[Constants.Note.NoteCount];
 		}
 
 		public override bool Add(Pitch pitch, T value)
@@ -27,7 +27,7 @@ namespace Instruments.Mapping.Mappers
 		}
 		public override bool Map(NoteMappingBase<T> destination)
 		{
-			for (int i = 0; i < Constants.Note.Count; ++i)
+			for (int i = 0; i < Constants.Note.NoteCount; ++i)
 				Set(destination, i, i, values[i]);
 
 			return true;

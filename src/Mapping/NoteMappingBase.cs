@@ -28,7 +28,7 @@ namespace Instruments.Mapping
 
 		public NoteMappingBase()
 		{
-			entries = new Item[Constants.Note.Count];
+			entries = new Item[Constants.Note.NoteCount];
 		}
 
 		protected void Set(Pitch pitch, Pitch samplePitch, T value)
