@@ -16,6 +16,7 @@ namespace Instruments.Core
         {
             base.Start(api);
 
+            // TODO@exocs: Add InstrumentType support
             api.RegisterBlockClass("musicblock", typeof(MusicBlock));
             api.RegisterBlockEntityClass("musicblockentity", typeof(BEMusicBlock));
 
@@ -35,18 +36,5 @@ namespace Instruments.Core
                 config = new InstrumentModSettings();
             }
         }
-
-		public override void AssetsLoaded(ICoreAPI api)
-		{
-			// Initialize all instrument types, these serve as a shared common
-			// storage for all properties of a single instrument kind.
-			InstrumentItemType.InitializeTypes(api);
-		}
-
-		public override void Dispose()
-		{
-			InstrumentItemType.CleanupTypes();
-			base.Dispose();
-		}
 	}
 }

@@ -3,9 +3,9 @@ using System.Collections.Generic; // List
 using System.Diagnostics;  // Debug todo remove
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Instruments.Network.Packets;
 using Instruments.Blocks;
-using Instruments.Items;
+using Instruments.Network.Packets;
+using Instruments.Types;
 
 namespace Instruments.Core
 {
@@ -160,8 +160,8 @@ namespace Instruments.Core
             if (player == null)
                 return;
 
-			InstrumentItemType instrumentType = InstrumentItemType.Find(serverPacket.InstrumentTypeID);
-            if (instrumentType == null || instrumentType.IsDefault)
+			InstrumentType instrumentType = InstrumentType.Find(serverPacket.InstrumentTypeID);
+            if (instrumentType == null)
                 return;
             //if (serverPacket.instrument == "" || serverPacket.instrument == "none")  // An invalid instrument was used, was the instrument pack removed?
             //    return;

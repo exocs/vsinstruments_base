@@ -4,7 +4,6 @@ using System.IO;
 using Vintagestory.API.Client;
 using Midi;
 using Instruments.Core;
-using Instruments.Items;
 using Instruments.Mapping;
 
 namespace Instruments
@@ -70,8 +69,7 @@ namespace Instruments
 		[Obsolete("Use InstrumentItemType API instead!")]
 		public string GetAnimation(string type)
 		{
-			InstrumentItemType itemType = InstrumentItemType.Find(type);
-			return itemType != null ? itemType.Animation : "None";
+			return "holdbothhands";
 		}
 		public bool UpdateSongList(ICoreClientAPI capi)
 		{

@@ -1,15 +1,13 @@
-﻿using Instruments.Core;
-using Instruments.Items;
-using Instruments.Mapping;
-using Midi;
-using ProtoBuf;
-using System; // Random
+﻿using System; // Random
 using System.Collections.Generic;
 using System.Diagnostics;  // Debug todo remove
+using ProtoBuf;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
+using Midi;
+using Instruments.Types;
 
 namespace Instruments
 {
@@ -88,9 +86,9 @@ namespace Instruments
 
         const int drumSamples = 64;
 
-        private InstrumentItemType _instrumentType;
+        private InstrumentType _instrumentType;
 
-        public InstrumentItemType InstrumentType 
+        public InstrumentType InstrumentType 
         { 
             get
             {
@@ -98,7 +96,7 @@ namespace Instruments
             } 
         }
 
-		public SoundManager(IClientWorldAccessor clientAcc, int sID, InstrumentItemType instrumentType, float startTime)
+		public SoundManager(IClientWorldAccessor clientAcc, int sID, InstrumentType instrumentType, float startTime)
         {
             client = clientAcc;
             _instrumentType = instrumentType;

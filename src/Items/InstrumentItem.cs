@@ -5,9 +5,10 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Util;
+using Midi;
 using Instruments.GUI;
 using Instruments.Network.Packets;
-using Midi;
+using Instruments.Types;
 
 namespace Instruments.Items
 {
@@ -373,11 +374,11 @@ namespace Instruments.Items
 			return (PlayMode)slot.Itemstack.Attributes.GetInt("toolMode", (int)PlayMode.abc);
 		}
 
-		protected virtual InstrumentItemType InstrumentType
+		protected InstrumentType InstrumentType
 		{
 			get
 			{
-				return InstrumentItemType.DefaultType;
+				return InstrumentType.Find(GetType());
 			}
 		}
 

@@ -3,16 +3,22 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Midi;
 using MidiParser;
-using Instruments.Items;
+using Instruments.Types;
 
 namespace Instruments.Players
 {
-	public class MusicPlayerMIDI/* : ABCPlayer*/
+	//
+	// Summary:
+	//     Allows opening and playing back a MIDI file.
+	public class MusicPlayerMIDI
 	{
-		private const int DefaultBPM = 120; // As per MIDI standard.
+		//
+		// Summary:
+		//     Default, fallback beats per minute as specified by the standard.
+		private const int DefaultBPM = 120;
 
 		private ICoreAPI _coreAPI;
-		private InstrumentItemType _instrumentType;
+		private InstrumentType _instrumentType;
 
 		private MidiTrack _midiTrack;
 
@@ -252,7 +258,7 @@ namespace Instruments.Players
 			PlaySound(pitch, channel, time);
 		}
 
-		public MusicPlayerMIDI(ICoreAPI api, InstrumentItemType instrumentType)
+		public MusicPlayerMIDI(ICoreAPI api, InstrumentType instrumentType)
 		{
 			_coreAPI = api;
 			_instrumentType = instrumentType;
