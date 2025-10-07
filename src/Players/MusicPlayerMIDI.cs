@@ -170,7 +170,7 @@ namespace Instruments.Players
 		//     Opens and plays the MIDI file at the provided file path.
 		public void Play(string midiFilePath, int channel)
 		{
-			MidiParser.MidiFile midiFile = new MidiFile(midiFilePath);
+			MidiFile midiFile = new MidiFile(midiFilePath);
 			Play(midiFile, channel);
 		}
 		//
