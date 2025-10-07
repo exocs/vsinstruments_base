@@ -18,6 +18,10 @@ namespace Instruments.Types
 	{
 		//
 		// Summary:
+		//     The interface to the game.
+		private ICoreAPI _api;
+		//
+		// Summary:
 		//     Unique identifier of this instrument type.
 		private int _id;
 		// Summary:
@@ -67,6 +71,7 @@ namespace Instruments.Types
 				return;
 			}
 
+			instrumentType._api = api;
 			instrumentType._id = id;
 			instrumentType._name = instrumentType.Name;
 			instrumentType._animation = instrumentType.Animation;
@@ -132,6 +137,17 @@ namespace Instruments.Types
 			Array.Clear(_toolModes);
 			_toolModes = null;
 		}
+		//
+		// Summary:
+		//     Returns the game api, available on the client and the server.
+		public ICoreAPI Api
+		{
+			get
+			{
+				return _api;
+			}
+		}
+
 		//
 		// Summary:
 		//     Returns the unique identifier of this instrument that can be used as a substitute for its name.
