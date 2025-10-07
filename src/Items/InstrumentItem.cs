@@ -41,32 +41,12 @@ namespace Instruments.Items
 			}
 		}
 
-		WorldInteraction[] interactions;
-
 		public override void OnLoaded(ICoreAPI api)
 		{
 			if (api.Side != EnumAppSide.Client)
 				return;
 
 			Startup();
-
-			interactions = ObjectCacheUtil.GetOrCreate(api, "InstrumentInteractions", () =>
-			{
-				return new WorldInteraction[]
-				{
-					new WorldInteraction()
-					{
-						ActionLangCode = "Perform Action",
-						MouseButton = EnumMouseButton.Right,
-					},
-					new WorldInteraction()
-					{
-						ActionLangCode = "Open Menu",
-						HotKeyCode = "f",
-					}
-				};
-			}
-			);
 		}
 		public override void OnUnloaded(ICoreAPI api)
 		{
