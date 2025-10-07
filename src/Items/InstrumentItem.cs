@@ -19,6 +19,11 @@ namespace Instruments.Items
 		private ICoreClientAPI capi;
 		bool holding = false;
 
+		//
+		// Summary:
+		//     The associated instrument type of this instrument.
+		private InstrumentType _instrumentType;
+
 		[Obsolete("Use InstrumentItemType API instead!")]
 		public string instrument
 		{
@@ -374,14 +379,20 @@ namespace Instruments.Items
 			return (PlayMode)slot.Itemstack.Attributes.GetInt("toolMode", (int)PlayMode.abc);
 		}
 
+		//
+		// Summary:
+		//     Returns the associated instrument type for this instance.
 		protected InstrumentType InstrumentType
 		{
 			get
 			{
-				return InstrumentType.Find(GetType());
+				return _instrumentType != null ? _instrumentType : _instrumentType = InstrumentType.Find(GetType());
 			}
 		}
 
+		//
+		// Summary:
+		//     Returns the unique identifier representing the type of this instrument.
 		public int InstrumentTypeID
 		{
 			get

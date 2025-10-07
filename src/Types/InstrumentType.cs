@@ -5,7 +5,6 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Midi;
-using Instruments.Items;
 using Instruments.Mapping;
 
 namespace Instruments.Types
@@ -17,23 +16,6 @@ namespace Instruments.Types
 	//     See InstrumentTypeExtensions for convenience API extensions.
 	public abstract class InstrumentType
 	{
-		//
-		// Summary:
-		//     Structure containing data for initializationg of an InstrumentType.
-		public struct InitArgs
-		{
-			public string Name;
-			public string Animation;
-			// User provided argument (optional)
-			public object Extra;
-
-			public InitArgs(string name, string animation, object extra = null)
-			{
-				Name = name;
-				Animation = animation;
-				Extra = extra;
-			}
-		}
 		//
 		// Summary:
 		//     Unique identifier of this instrument type.
@@ -66,22 +48,48 @@ namespace Instruments.Types
 		}
 		//
 		// Summary:
-		//     Registers and associates the provided class type with given instance type.
-		internal static void RegisterType(ICoreAPI api, Type instanceType, InstrumentType classType, InitArgs initArgs)
+		//     Creates new type.
+		public InstrumentType(string name, string animation)
 		{
-			int id = ComputeID(instanceType);
-			if (_instrumentTypes.TryAdd(id, classType))
-			{
-				classType._id = id;
-				classType._name = initArgs.Name;
-				classType._animation = initArgs.Animation;
-				classType.Initialize(api, initArgs);
-			}
+			_name = name;
+			_animation = animation;
 		}
 		//
 		// Summary:
-		//     Initializes this type.
-		protected virtual void Initialize(ICoreAPI api, InitArgs initArgs)
+		//     Registers and associates the provided class type with given instance type.
+		public static void Register(ICoreAPI api, Type instanceType, InstrumentType instrumentType)
+		{
+			int id = ComputeID(instanceType);
+			if (!_instrumentTypes.TryAdd(id, instrumentType))
+			{
+				// This instrument type is already registered. This may be legal when the application is
+				// running as both the server and the client.
+				return;
+			}
+
+			instrumentType._id = id;
+			instrumentType._name = instrumentType.Name;
+			instrumentType._animation = instrumentType.Animation;
+			instrumentType.Initialize(api);
+		}
+		//
+		// Summary:
+		//     Cleans up all registered types.
+		public static void UnregisterAll()
+		{
+			InstrumentType[] allTypes = new InstrumentType[_instrumentTypes.Count];
+			for (int i = 0; i < allTypes.Length; ++i)
+			{
+				InstrumentType type = allTypes[i];
+				if (_instrumentTypes.Remove(type._id))
+					type.Cleanup();
+			}
+			_instrumentTypes.Clear();
+		}
+		//
+		// Summary:
+		//     Initialize this type.
+		protected virtual void Initialize(ICoreAPI api)
 		{
 			_toolModes = new SkillItem[4];
 			_toolModes[(int)PlayMode.abc] = new SkillItem() { Code = new AssetLocation(PlayMode.abc.ToString()), Name = Lang.Get("ABC Mode") };
@@ -134,7 +142,6 @@ namespace Instruments.Types
 				return _id;
 			}
 		}
-
 		//
 		// Summary:
 		//     Returns the name of this instrument, as defined in data.
@@ -208,24 +215,12 @@ namespace Instruments.Types
 		//
 		// Summary:
 		//     Finds the instrument item type by its instance type.
-		internal static InstrumentType Find(Type type)
+		// Parameters:
+		//   instanceType: The type of the instrument instance.
+		internal static InstrumentType Find(Type instanceType)
 		{
-			int typeID = ComputeID(type);
+			int typeID = ComputeID(instanceType);
 			return Find(typeID);
-		}
-		//
-		// Summary:
-		//     Iterates through all existing instrument types, raising the callback for each entry.
-		//     Stops the iteration once the callback function returns true.
-		//     This method is considered very inefficient and should be avoided whenever possible.
-		internal static InstrumentType Foreach(System.Func<InstrumentType, bool> callback)
-		{
-			foreach (var keyValuePair in _instrumentTypes)
-			{
-				if (callback(keyValuePair.Value))
-					return keyValuePair.Value;
-			}
-			return null;
 		}
 		//
 		// Summary:
@@ -234,8 +229,20 @@ namespace Instruments.Types
 		{
 			return type.FullName.GetHashCode();
 		}
+		//
+		// Summary:
+		//     Finds all instruments with the provided name.
+		//     This method is considered slow and should only be used in rare scenarios.
+		internal static void Find(string name, List<InstrumentType> destination, StringComparison comparison = StringComparison.OrdinalIgnoreCase)
+		{
+			foreach (var kvp in _instrumentTypes)
+			{
+				InstrumentType instrumentType = kvp.Value;
+				if (string.Compare(name, instrumentType.Name, comparison) == 0)
+					destination.Add(instrumentType);
+			}
+		}
 	}
-
 	//
 	// Summary:
 	//     This class provides convenience and utility extensions for instrument types.
@@ -243,22 +250,17 @@ namespace Instruments.Types
 	{
 		//
 		// Summary:
-		//     Register instrument along with its associated instrument type class.
+		//     Registers the provided instrument item into the game API and registers the
+		//     provided instrument type as its associated instrument type.
 		//
 		// Parameters:
 		//   api: Game API
-		//   name: Default instrument name
-		//   animation: Default animation used by the instrument
-		//   extra: User provided params
-		public static void RegisterInstrumentItem<Instrument, InstrumentClass>(this ICoreAPI api, string name, string animation, object extra = null)
-			where Instrument : InstrumentItem
-			where InstrumentClass : InstrumentType, new()
+		//   itemType: Instrument instance type.
+		//   instrumentType: Instrument type instance.
+		public static void RegisterInstrumentItem(this ICoreAPI api, Type itemType, InstrumentType instrumentType)
 		{
-			Type itemType = typeof(Instrument);
-			api.RegisterItemClass(name, itemType);
-			InstrumentClass instrumentType = new InstrumentClass();
-			InstrumentType.InitArgs initArgs = new InstrumentType.InitArgs(name, animation, extra);
-			InstrumentType.RegisterType(api, itemType, instrumentType, initArgs);
+			api.RegisterItemClass(instrumentType.Name, itemType);
+			InstrumentType.Register(api, itemType, instrumentType);
 		}
 	}
 }
