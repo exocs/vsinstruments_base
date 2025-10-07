@@ -439,9 +439,8 @@ namespace Instruments
                 packet.newChord = nextChord;
                 packet.positon = position;
                 packet.fromClientID = playerID;
-                // TODO@exocs: Block and similar will require their own type.
-                InstrumentItem item = InstrumentItem.GetEntityInstrument(playerEntity);
-                packet.InstrumentTypeID = item != null ? item.InstrumentTypeID : -1;
+                InstrumentItem item = playerEntity is EntityPlayer entPly && entPly.ActiveHandItemSlot.Itemstack.Item is InstrumentItem inst ? inst : null;
+				packet.InstrumentTypeID = item != null ? item.InstrumentTypeID : -1;
 				IServerNetworkChannel ch = serverAPI.Network.GetChannel(Constants.Channel.Abc);
                 ch.BroadcastPacket(packet);
             }

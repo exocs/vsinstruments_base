@@ -398,19 +398,6 @@ namespace Instruments.Items
 				true);
 			return sound;
 		}
-
-
-		[Obsolete()] // TODO@exocs: Move this somewhere relevant and make sure it handles music blocks too
-		public static InstrumentItem GetEntityInstrument(Entity player)
-		{
-			if (player is EntityPlayer playerEntity)
-			{
-				if (playerEntity.ActiveHandItemSlot.Itemstack.Item is InstrumentItem instrument)
-					return instrument;
-			}
-
-			return null;
-		}
 	}
 
 #if false  // I'm keeping this for debugging
