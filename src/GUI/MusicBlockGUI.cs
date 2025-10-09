@@ -125,8 +125,8 @@ namespace Instruments.GUI
         }
         private bool OnSongSelect()
         {
-            SongSelectGUI songGui = new SongSelectGUI(capi, SetSong, Definitions.Instance.GetSongList());
-            songGui.TryOpen();
+            //SongSelectGUI songGui = new SongSelectGUI(capi, SetSong, Definitions.Instance.GetSongList());
+            //songGui.TryOpen();
             return true;
         }
         private int SetSong(string filePath)

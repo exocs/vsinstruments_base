@@ -47,10 +47,12 @@ namespace Instruments
 		{
 			return bandName;
 		}
+		[Obsolete("Use toolMode attribute instead!", false)]
 		public void SetPlayMode(PlayMode newMode)
 		{
 			mode = newMode;
 		}
+		[Obsolete("Use toolMode attribute instead!", false)]
 		public PlayMode GetPlayMode()
 		{
 			return mode;
@@ -75,7 +77,7 @@ namespace Instruments
 		{
 			abcFiles.Clear();
 			// First, check the client's dir exists
-			string localDir = InstrumentModCommon.config.abcLocalLocation;
+			string localDir = InstrumentModSettings.Instance.abcLocalLocation;
 			if (RecursiveFileProcessor.DirectoryExists(localDir))
 			{
 				// It exists! Now find the files in it
@@ -107,9 +109,10 @@ namespace Instruments
 		{
 			serverAbcFiles.Add(songFileName);
 		}
+		[Obsolete("Abc playback is obsolete!")]
 		public string ABCBasePath()
 		{
-			return InstrumentModCommon.config.abcLocalLocation;
+			return InstrumentModSettings.Instance.abcLocalLocation;
 		}
 		public void SetIsPlaying(bool toggle)
 		{

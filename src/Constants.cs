@@ -56,5 +56,15 @@ namespace Instruments
 
 			public const string Abc = "abc";
 		}
+		//
+		// Summary:
+		//     This structure contains constants related to item and block attributes.
+		public struct Attributes
+		{
+			//
+			// Summary:
+			//     Attribute of this type will contain the current mode the tool is set to.
+			public const string ToolMode = "toolMode";
+		}
 	}
 }

@@ -128,7 +128,7 @@ namespace Instruments.Core
                 }
             }
             IClientWorldAccessor clientWorldAccessor = clientApi.World;
-            Sound sound = new Sound(clientWorldAccessor, note.positon, note.pitch, string.Empty, note.ID, config.playerVolume);
+            Sound sound = new Sound(clientWorldAccessor, note.positon, note.pitch, string.Empty, note.ID, InstrumentModSettings.Instance.playerVolume);
             if (sound.sound == null)
                 Debug.WriteLine("Sound creation failed!");
             else

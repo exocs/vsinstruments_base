@@ -6,6 +6,7 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Midi;
 using Instruments.GUI;
+using Instruments.GUI;
 using Instruments.Network.Packets;
 using Instruments.Types;
 
@@ -61,11 +62,12 @@ namespace Instruments.Items
 		}
 		public override void SetToolMode(ItemSlot slot, IPlayer byPlayer, BlockSelection blockSel, int toolMode)
 		{
-			slot.Itemstack.Attributes.SetInt("toolMode", toolMode);
+			SetPlayMode(slot, (PlayMode)toolMode);
 		}
 		public override int GetToolMode(ItemSlot slot, IPlayer byPlayer, BlockSelection blockSel)
 		{
-			return Math.Min(InstrumentType.ToolModes.Length - 1, slot.Itemstack.Attributes.GetInt("toolMode"));
+			PlayMode playMode = GetPlayMode(slot);
+			return Math.Min(InstrumentType.ToolModes.Length - 1, (int)playMode);
 		}
 		public override void OnHeldInteractStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
 		{
@@ -160,12 +162,7 @@ namespace Instruments.Items
 			}
 		}
 
-		public int SetMode(PlayMode newMode)
-		{
-			//fixme as this is called from a gui, the server does not see this. Need to send a packet to tell the server this. Or, does server even need to run this code?
-			Definitions.Instance.SetPlayMode(newMode);
-			return 1;
-		}
+		
 		public void SetBand(string bn)
 		{
 			Definitions.Instance.SetBandName(bn);
@@ -348,14 +345,21 @@ namespace Instruments.Items
 			if (Definitions.Instance.UpdateSongList(capi))
 			{
 				Action<string> sb = SetBand;
-				SongSelectGUI songGui = new SongSelectGUI(capi, PlaySong, Definitions.Instance.GetSongList(), sb, Definitions.Instance.GetBandName());
-				songGui.TryOpen();
+				//SongSelectGUI songGui = new SongSelectGUI(capi, PlaySong, Definitions.Instance.GetSongList(), sb, Definitions.Instance.GetBandName());
+				SongSelectGUI songGUI = new SongSelectGUI(capi, Core.InstrumentModSettings.Instance.LocalMidiDirectory);
+				songGUI.TryOpen();
 			}
 		}
 
+		private void SetPlayMode(ItemSlot slot, PlayMode playMode)
+		{
+			slot.Itemstack.Attributes.SetInt(Constants.Attributes.ToolMode, (int)playMode);
+		}
+
+
 		private PlayMode GetPlayMode(ItemSlot slot)
 		{
-			return (PlayMode)slot.Itemstack.Attributes.GetInt("toolMode", (int)PlayMode.abc);
+			return (PlayMode)slot.Itemstack.Attributes.GetInt(Constants.Attributes.ToolMode, (int)PlayMode.abc);
 		}
 
 		//

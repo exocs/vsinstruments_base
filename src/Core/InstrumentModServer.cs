@@ -76,7 +76,7 @@ namespace Instruments.Core
         }
         public void SendSongs(IServerPlayer byPlayer)
         {
-            string serverDir = config.abcServerLocation;
+            string serverDir = InstrumentModSettings.Instance.abcServerLocation;
             if (!RecursiveFileProcessor.DirectoryExists(serverDir))
                 return; // Server has no abcs, do nothing
 
@@ -121,7 +121,7 @@ namespace Instruments.Core
                 {
                     // The contained string is NOT a full song, but a link to it on the server.
                     // Find this file, load it, and make the abcParser in the same way
-                    string fileLocation = config.abcServerLocation;
+                    string fileLocation = InstrumentModSettings.Instance.abcServerLocation;
                     RecursiveFileProcessor.ReadFile(fileLocation + Path.DirectorySeparatorChar + abcData.abcData, ref abcSong);
                 }
                 else

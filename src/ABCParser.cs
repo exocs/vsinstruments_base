@@ -153,14 +153,14 @@ namespace Instruments
                 if (chordBuffer.Count == 0)
                     return ExitStatus.finished;
             }
-            if (chordBuffer.Count == InstrumentModCommon.config.abcBufferSize && chordBuffer[^1].CheckShouldStop(currentTime + 1000))  // If the last note in the buffer finishes in the next second, that's too many notes in too short a time! We must DESTROY IT
+            if (chordBuffer.Count == InstrumentModSettings.Instance.abcBufferSize && chordBuffer[^1].CheckShouldStop(currentTime + 1000))  // If the last note in the buffer finishes in the next second, that's too many notes in too short a time! We must DESTROY IT
                 return ExitStatus.overload;
             return allOk;
         }
         private bool ParseFile()
         {
             int timeout = 32;
-            while (chordBuffer.Count < InstrumentModCommon.config.abcBufferSize && timeout > 0)
+            while (chordBuffer.Count < InstrumentModSettings.Instance.abcBufferSize && timeout > 0)
             {
                 timeout--;
                 if (charIndex >= file.Length || endOfFile)
