@@ -41,6 +41,11 @@ namespace Instruments
 			public const int NameChangeID = 1004;
 			public const int BandChangeID = 1005;
 			public const int SongSelectID = 1006;
+
+			//
+			// Summary:
+			//     Packet sent when a player tries to 'open' a music block. (TODO@exocs: Verify this assertion.)
+			public const int MusicBlockOpenID = 69;
 		}
 		//
 		// Summary:

@@ -180,7 +180,7 @@ namespace Instruments.Blocks
                 ((ICoreServerAPI)Api).Network.SendBlockEntityPacket(
                     (IServerPlayer)byPlayer,
                     bp,
-                    69,
+					Constants.Packet.MusicBlockOpenID,
                     data
                 );
                 byPlayer.InventoryManager.OpenInventory(inventory);
@@ -256,7 +256,7 @@ namespace Instruments.Blocks
             // The server saw a player tried to open the music box - it sent a packet, and here it is!
             // Open the gui.
             base.OnReceivedServerPacket(packetid, data);
-            if (packetid == 69)
+            if (packetid == Constants.Packet.MusicBlockOpenID)
             {
                 using (MemoryStream ms = new MemoryStream(data))
                 {
