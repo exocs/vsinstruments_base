@@ -14,18 +14,34 @@ namespace Instruments.Files
 	{
 		//
 		// Summary:
+		//     Flags defining static filter logic for obtaining nodes from the FileTree.
+		[Flags]
+		public enum Filter
+		{
+			Directories = 0x01,
+			Files = 0x02,
+			ExpandedOnly = 0x04,
+
+			All = Directories | Files | ExpandedOnly
+		}
+		//
+		// Summary:
 		//     A single node representing a file or a directory.
 		public class Node : IFlatListItem
 		{
-			private string _name;
-			private bool _isDirectory;
-			private Node _parent;
+			[Flags]
+			private enum NodeFlags : byte
+			{
+				IsDirectory = 0x01,
+				IsExpanded = 0x02,
+				IsDirty = 0x04,
+				IsSelected = 0x08
+			}
 			private List<Node> _children;
-
 			//
 			// Summary:
 			//     Texture used for drawing this node in the GUI.
-			private LoadedTexture _texture;
+			private LoadedTexture Texture { get; set; }
 			//
 			// Summary:
 			//     Absolute path to this object.
@@ -33,32 +49,20 @@ namespace Instruments.Files
 			{
 				get
 				{
-					if (_parent != null)
-						return Path.Combine(_parent.FullPath, _name);
+					if (Parent != null)
+						return Path.Combine(Parent.FullPath, Name);
 
-					return _name;
+					return Name;
 				}
 			}
 			//
 			// Summary:
 			//     Name of this object, including its extensions.
-			public string Name
-			{
-				get
-				{
-					return _name;
-				}
-			}
+			public string Name { get; private set; }
 			//
 			// Summary:
 			//     Parent object or null if root object.
-			public Node Parent
-			{
-				get
-				{
-					return _parent;
-				}
-			}
+			public Node Parent { get; private set; }
 			//
 			// Summary:
 			//     Number of child objects.
@@ -91,12 +95,62 @@ namespace Instruments.Files
 			}
 			//
 			// Summary:
+			//     Children objects of this node.
+			private NodeFlags Flags { get; set; }
+			//
+			// Summary:
+			//     Returns whether provided flag is set.
+			private bool HasFlag(NodeFlags flag)
+			{
+				return Flags.HasFlag(flag);
+			}
+			//
+			// Summary:
+			//     Sets the provided flag and returns whether value has changed.
+			private bool SetFlag(NodeFlags flag)
+			{
+				NodeFlags previous = Flags;
+				Flags |= flag;
+				return Flags != previous;
+			}
+			//
+			// Summary:
+			//     Clears the provided flag and returns whether value has changed.
+			private bool ClearFlag(NodeFlags flag)
+			{
+				NodeFlags previous = Flags;
+				Flags &= ~flag;
+				return Flags != previous;
+			}
+			//
+			// Summary:
 			//     Returns whether this object is a directory.
 			public bool IsDirectory
 			{
 				get
 				{
-					return _isDirectory;
+					return Flags.HasFlag(NodeFlags.IsDirectory);
+				}
+				private set
+				{
+					if (value)
+						Flags |= NodeFlags.IsDirectory;
+					else
+						Flags &= ~NodeFlags.IsDirectory;
+				}
+			}
+			//
+			// Summary:
+			//     Returns whether this node is dirty and needs to be recomposed.
+			private bool IsDirty
+			{
+				get
+				{
+					return HasFlag(NodeFlags.IsDirty);
+				}
+				set
+				{
+					SetFlag(NodeFlags.IsDirty);
 				}
 			}
 			//
@@ -112,21 +166,77 @@ namespace Instruments.Files
 			//
 			// Summary:
 			//     Whether this node is expanded (in any relevant view) or not.
-			public bool IsExpanded { get; set; } = true;
+			public bool IsExpanded
+			{
+				get
+				{
+					return HasFlag(NodeFlags.IsExpanded);
+				}
+				set
+				{
+					if (value && SetFlag(NodeFlags.IsExpanded))
+					{
+						SetFlag(NodeFlags.IsDirty);
+					}
+					else if (ClearFlag(NodeFlags.IsExpanded))
+					{
+						SetFlag(NodeFlags.IsDirty);
+					}
+				}
+			}
+			//
+			// Summary:
+			//     Whether this node is selected (in any relevant view) or not.
+			public bool IsSelected
+			{
+				get
+				{
+					return HasFlag(NodeFlags.IsSelected);
+				}
+				set
+				{
+					if (value && SetFlag(NodeFlags.IsSelected))
+					{
+						SetFlag(NodeFlags.IsDirty);
+					}
+					else if (ClearFlag(NodeFlags.IsSelected))
+					{
+						SetFlag(NodeFlags.IsDirty);
+					}
+				}
+			}
 			//
 			// Summary:
 			//     Optional user-provided data, null by default.
 			public object Context { get; set; } = null;
+			//
+			// Summary:
+			//     Returns the depth within the tree, starting at 0 for the root node.
+			public int Depth
+			{
+				get
+				{
+					int depth = 0;
 
+					Node parent = Parent;
+					while (parent != null)
+					{
+						++depth;
+						parent = parent.Parent;
+					}
+
+					return depth;
+				}
+			}
 			//
 			// Summary:
 			//     Creates new node.
 			public Node(string fullPath)
 			{
-				_name = Path.GetFileName(fullPath);
-				_isDirectory = Directory.Exists(fullPath);
+				Name = Path.GetFileName(fullPath);
+				IsDirectory = Directory.Exists(fullPath);
 				_children = new List<Node>();
-				_parent = null;
+				Parent = null;
 			}
 			//
 			// Summary:
@@ -137,7 +247,7 @@ namespace Instruments.Files
 					throw new Exception("Node already has a parent set!");
 
 				_children.Add(node);
-				node._parent = this;
+				node.Parent = this;
 			}
 			//
 			// Summary:
@@ -171,14 +281,14 @@ namespace Instruments.Files
 					throw new Exception("Trying to remove a child from an unrelated parent!");
 
 				_children.Remove(child);
-				child._parent = null;
+				child.Parent = null;
 			}
 			//
 			// Summary:
 			//     Renames this node.
 			internal void Rename(string newName)
 			{
-				_name = newName;
+				Name = newName;
 			}
 			//
 			// Summary:
@@ -236,13 +346,32 @@ namespace Instruments.Files
 					return true;
 				}
 			}
+			
+			/*
+			 TODO: This will require some additional context?
+			private string GetGuiLabel()
+			{
+				char symbol = ' ';
+				//if (IsDirectory && IsExpanded)
+				//	symbol = '▼';
+				//else
+				//	symbol = '►';
+
+				return string.Concat(new string(' ', Depth), symbol, ' ', Name);
+			*/
 			//
 			// Summary:
 			//     Recomposes the GUI for this node.
 			public void Recompose(ICoreClientAPI capi)
 			{
-				_texture?.Dispose();
-				_texture = new TextTextureUtil(capi).GenTextTexture(Name, CairoFont.WhiteSmallText());
+				Texture?.Dispose();
+
+				CairoFont font = CairoFont.WhiteSmallText();
+				if (IsSelected)
+				{
+					font.Color = GuiStyle.ActiveButtonTextColor;
+				}
+				Texture = new TextTextureUtil(capi).GenTextTexture(Name, font);
 			}
 			//
 			// Summary:
@@ -252,17 +381,18 @@ namespace Instruments.Files
 				float size = (float)GuiElement.scaled(25);
 				float pad = (float)GuiElement.scaled(10);
 
-				if (_texture == null)
+				if (Texture == null || IsDirty)
 				{
 					Recompose(capi);
+					IsDirty = false;
 				}
 
 				capi.Render.Render2DTexturePremultipliedAlpha(
-				_texture.TextureId,
+				Texture.TextureId,
 				(x + pad),
 				y + size / 4 - GuiElement.scaled(3),
-				_texture.Width,
-				_texture.Height,
+				Texture.Width,
+				Texture.Height,
 				50
 				);
 			}
@@ -271,10 +401,10 @@ namespace Instruments.Files
 			//     Disposes of all resources allocated by this node.
 			public void Dispose()
 			{
-				if (_texture != null)
+				if (Texture != null)
 				{
-					_texture.Dispose();
-					_texture = null;
+					Texture.Dispose();
+					Texture = null;
 				}
 			}
 			//
@@ -283,8 +413,8 @@ namespace Instruments.Files
 			internal void Delete()
 			{
 				// Unparent the node first so it can be safely manipulated with.
-				if (_parent != null)
-					_parent.RemoveChild(this);
+				if (Parent != null)
+					Parent.RemoveChild(this);
 
 				// Now that the node is no longer parented, make a copy of the children collection,
 				// as it will be manipulated and start deleting the nodes (starting with leaves).
@@ -297,6 +427,44 @@ namespace Instruments.Files
 
 				// Finally dispose of the node
 				Dispose();
+			}
+
+			//
+			// Summary:
+			//     Outputs all nodes, starting with this node to the destination list.
+			// Parameters:
+			//   filter: Static filter determining which kind of items to retrieve.
+			//   maxDepth: Maximum search depth with 0 being unlimited search depth.
+			public void GetNodes(List<Node> destination, Filter filter = Filter.All, int maxDepth = -1)
+			{
+				bool includeDirectory = filter.HasFlag(Filter.Directories);
+				bool includeFiles = filter.HasFlag(Filter.Files);
+				bool includeExpandedOnly = filter.HasFlag(Filter.ExpandedOnly);
+
+				int depth = 0;
+				void appendNode(Node node, List<Node> destination)
+				{
+					if (node.IsDirectory)
+					{
+						if (includeDirectory)
+							destination.Add(node);
+
+						if ((!includeExpandedOnly || node.IsExpanded))
+						{
+							if (maxDepth > 0 && ++depth > maxDepth)
+								return;
+
+							foreach (Node child in node.Children)
+								appendNode(child, destination);
+						}
+					}
+					else if (includeFiles)
+					{
+						destination.Add(node);
+					}
+				}
+
+				appendNode(this, destination);
 			}
 		}
 		//
@@ -580,37 +748,13 @@ namespace Instruments.Files
 		}
 		//
 		// Summary:
-		//     Outputs all nodes available in the tree to the destination list.
+		//     Outputs all nodes, starting with this node to the destination list.
 		// Parameters:
-		//   expandedOnly: Whether only expanded directories should be included.
-		public void GetNodes(List<Node> destination, bool expandedOnly = true)
+		//   filter: Static filter determining which kind of items to retrieve.
+		//   maxDepth: Maximum search depth with 0 being unlimited search depth.
+		public void GetNodes(List<Node> destination, Filter filter = Filter.All, int maxDepth = 0)
 		{
-			void appendNodeExpandedOnly(Node node, List<Node> dst)
-			{
-				dst.Add(node);
-				if (!node.IsExpanded)
-					return;
-
-				foreach (Node child in node.Children)
-					appendNodeExpandedOnly(child, dst);
-
-
-			}
-			void appendNodeAll(Node node, List<Node> dst)
-			{
-				dst.Add(node);
-				foreach (Node child in node.Children)
-					appendNodeAll(child, dst);
-			}
-
-			if (expandedOnly)
-			{
-				appendNodeExpandedOnly(_rootNode, destination);
-			}
-			else
-			{
-				appendNodeAll(_rootNode, destination);
-			}
+			_rootNode.GetNodes(destination, filter, maxDepth);
 		}
 		//
 		// Summary:
