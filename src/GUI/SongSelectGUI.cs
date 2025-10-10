@@ -244,7 +244,7 @@ namespace Instruments.GUI
 
 						// Top bar with address text and search bar
 						.AddDynamicText(".", CairoFont.WhiteDetailText(), addressBarBounds, Keys.LocationText)
-						.AddTextInput(searchBarBounds, FilterContent, CairoFont.WhiteSmallishText(), Keys.SearchTextInput)
+						.AddTextInput(searchBarBounds, FilterContent, CairoFont.WhiteDetailText(), Keys.SearchTextInput)
 
 						// Left panel, i.e. the tree view
 						.BeginClip(treePaneBounds.ForkBoundingParent())
