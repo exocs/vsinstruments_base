@@ -480,6 +480,10 @@ namespace Instruments.GUI
 
 				components.Add(new RichTextComponent(capi, right + Environment.NewLine, rightFont));
 			}
+			void addSingleComponent(string left)
+			{
+				components.Add(new RichTextComponent(capi, left + ":\n", leftFont));
+			}
 
 			addComponent("Name", node.Name);
 			addComponent("Path", node.DirectoryPath);
@@ -513,10 +517,32 @@ namespace Instruments.GUI
 				MidiParser.MidiFile parser = new MidiParser.MidiFile(fileInfo.FullName);
 				addComponent("Format", midiFormat(parser.Format));
 				addComponent("Tracks", $"{parser.TracksCount}");
+
+				string getDuration(double seconds)
+				{
+					TimeSpan duration = TimeSpan.FromSeconds(seconds);
+					return string.Format(
+						"{0:00}:{1:00}:{2:00}",
+						duration.Hours, duration.Minutes,
+						duration.Seconds, MathF.Round(duration.Milliseconds)
+						);
+				}
+
+				// Add data about individual tracks
+				for (int ti = 0; ti < parser.TracksCount; ++ti)
+				{
+					//components.Add(new RichTextComponent(capi, $"  {ti:00:}                   {getDuration(parser.ReadTrackDuration(ti))}", leftFont));
+					//components.Add(new RichTextComponent(capi, $"{parser.Tracks[ti].MidiEvents.Count} events\n", rightFont));
+
+					components.Add(new RichTextComponent(capi, $"    Track {ti:00} - {parser.Tracks[ti].MidiEvents.Count:0000} events", leftFont));
+					components.Add(new RichTextComponent(capi, $"{getDuration(parser.ReadTrackDuration(ti))}\n", rightFont));
+					//addComponent($"    Track {ti}",
+					//	$"{getDuration(parser.ReadTrackDuration(ti))}, {parser.Tracks[ti].MidiEvents.Count} events");
+					//addComponent($"    Track {ti} [{parser.Tracks[ti].MidiEvents.Count}]",
+					//	$"{getDuration(parser.ReadTrackDuration(ti))}");
+				}
 				addComponent("BPM", $"{parser.ReadBPM()}");
-				TimeSpan duration = TimeSpan.FromSeconds(parser.ReadMaxTrackDuration());
-				addComponent("Duration", $"{duration}");
-				// TODO: Midi details here
+				addComponent("Duration", getDuration(parser.ReadMaxTrackDuration()));
 			}
 			catch
 			{
