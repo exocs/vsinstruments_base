@@ -41,7 +41,14 @@ namespace Instruments.GUI
 		// Summary:
 		//     Stores the currently selected text filter.
 		private string _textFilter;
-
+		//
+		// Summary:
+		//     Flag that is set when this tree has changed.
+		private bool _hasChanged;
+		//
+		// Summary:
+		//     Object used for locking this context when accessed from other threads.
+		private object _hasChangedLock = new object();
 		//
 		// Summary:
 		//     Convenience wrapper for all text constants of individual Gui elements for this menu.
@@ -110,6 +117,16 @@ namespace Instruments.GUI
 			: base(capi)
 		{
 			_fileTree = new FileTree(directory);
+
+			// TODO@exocs: Solve more pragmatically, for now this is good enough.
+			_fileTree.NodeChanged += (node) =>
+			{
+				lock (_hasChangedLock)
+				{
+					_hasChanged = true;
+				}
+			};
+
 			_treeNodes = new List<FileTree.Node>();
 			_contentNodes = new List<FileTree.Node>();
 
@@ -118,7 +135,7 @@ namespace Instruments.GUI
 		}
 		//
 		// Summary:
-		//     Dispose of allocated resources once menu is closeed.
+		//     Dispose of allocated resources once menu is closed.
 		public override void OnGuiClosed()
 		{
 			if (_fileTree != null)
@@ -128,18 +145,9 @@ namespace Instruments.GUI
 			}
 			base.OnGuiClosed();
 		}
-
-		public override void OnGuiOpened()
-		{
-			//FilterSongs();
-			//SelectTreeViewNode(_treeNodes.Count > 0 ? _treeNodes[0] : null);
-			//SetupScrollbars();
-			//SingleComposer.GetTextInput("search").SetValue("");
-			//base.OnGuiOpened();
-
-			base.OnGuiOpened();
-		}
-
+		//
+		// Summary:
+		//     Prepares and composes the dialog.
 		private void SetupDialog(string title, string bandName)
 		{
 			// Constants
@@ -247,7 +255,6 @@ namespace Instruments.GUI
 			// Initial refresh to get up-to-date state.
 			RefreshContent(true, true);
 		}
-
 		//
 		// Summary:
 		//     Callback raised when the scroll bar value for provided list has changed.
@@ -307,8 +314,8 @@ namespace Instruments.GUI
 			{
 				_treeNodes.Clear();
 				_fileTree.GetNodes(_treeNodes, FileTree.Filter.Directories | FileTree.Filter.ExpandedOnly);
-				UpdateScrollBarSize(TreeList, TreeScrollBar);
 				LocationText.SetNewText(_treeSelection != null ? _treeSelection.FullPath : "-");
+				UpdateScrollBarSize(TreeList, TreeScrollBar);
 			}
 
 			// Refresh content view
@@ -324,7 +331,7 @@ namespace Instruments.GUI
 				if (treeNode != null)
 				{
 					treeNode.GetNodes(
-						_contentNodes, 
+						_contentNodes,
 						FileTree.Filter.Files,
 						isFilterEnabled ? 0 : 1
 						);
@@ -398,7 +405,24 @@ namespace Instruments.GUI
 			SingleComposer.GetDynamicText("Band name").SetNewText(newText);
 			bandNameChange(bandName);
 		}
-		
+		//
+		// Summary:
+		//     Polls for periodic changes.
+		public override void OnBeforeRenderFrame3D(float deltaTime)
+		{
+			// Poll for changes from the file tree and update the content if necessary.
+			lock (_hasChangedLock)
+			{
+				if (_hasChanged)
+				{
+					_hasChanged = false;
+					RefreshContent(true, true);
+				}
+			}
+
+			base.OnBeforeRenderFrame3D(deltaTime);
+		}
+
 		private void Close()
 		{
 			TryClose();

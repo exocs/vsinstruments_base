@@ -319,7 +319,7 @@ namespace Instruments.Files
 			{
 				// Determine whether we are searching for a file in this depth,
 				// or rather just a partial path to a file in any of its children.
-				int separator = path.IndexOf(Path.PathSeparator);
+				int separator = path.IndexOf(Path.DirectorySeparatorChar);
 
 				// No separator, searching for direct files; no recursion at all
 				if (separator == -1)
@@ -659,11 +659,15 @@ namespace Instruments.Files
 		//     Callback raised when the watcher detects an entry was changed.
 		private void OnWatcherChangedEvent(object sender, FileSystemEventArgs args)
 		{
-			// This event is already handled as part of OnWatcherRenamedEvent
-			if (args.ChangeType == WatcherChangeTypes.Renamed ||
-				args.ChangeType == WatcherChangeTypes.Created)
-				return;
+			// Update:
+			//   Actually raise this event at all times, it makes certain usage
+			//   much more convenient - a change is a change. Maybe consider adding
+			//   event args as well as the user can handle it as they want.
 
+			// This event is already handled as part of OnWatcherRenamedEvent
+			//if (args.ChangeType == WatcherChangeTypes.Renamed ||
+			//	args.ChangeType == WatcherChangeTypes.Created)
+			//	return;
 			Node node = Find(args.FullPath);
 			if (node != null)
 			{

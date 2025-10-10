@@ -259,37 +259,31 @@ namespace Instruments.GUI
 				if (element.Visible)
 				{
 					// Definitely should be added
-					float num4 = (float)(5.0 + Bounds.absY + absY);
-					if (inside && (double)mouseX > Bounds.absX && (double)mouseX <= Bounds.absX + Bounds.InnerWidth && (double)mouseY >= (double)num4 - padY && (double)mouseY <= (double)num4 + cellHeight - padY)
+					float posY = (float)(5.0 + Bounds.absY + absY);
+					if (inside && (double)mouseX > Bounds.absX && (double)mouseX <= Bounds.absX + Bounds.InnerWidth && (double)mouseY >= (double)posY - padY && (double)mouseY <= (double)posY + cellHeight - padY)
 					{
 						if (HoverOverlayTexture != null)
-							api.Render.Render2DLoadedTexture(HoverOverlayTexture, (float)Bounds.absX, num4 - (float)padY);
+							api.Render.Render2DLoadedTexture(HoverOverlayTexture, (float)Bounds.absX, posY - (float)padY);
 					}
-
-					// Folder expanded?
-					//int depth = node.Depth;
-
 
 					if (absY > -50.0 && absY < Bounds.OuterHeight + 50.0)
 					{
-						//int symbolOffset = ExpandedTexture.Width + 4;
-						//int offset = node.Depth * 4;
-
-						float xOffset = 0;
+						Vec4f expandBounds = GetExpandButtonBounds(posY, node.Depth);
+						float xOffset = expandBounds.X;
 						if (node.ChildDirectoryCount > 0)//Currently only folders, but ugh
 						{
 							LoadedTexture tex = node.IsExpanded ? ExpandedTexture : CollapsedTexture;
 
-							Vec4f bounds = GetExpandButtonBounds(num4, node.Depth);
-							Vec4f color = GuiExtensions.IsInside(mouseX, mouseY, bounds) ? GuiExtensions.ActiveButtonTextColor : GuiExtensions.DialogDefaultTextColor;
-							xOffset += bounds.X + (float)GetConstantExpandOffset();
+
+							Vec4f color = GuiExtensions.IsInside(mouseX, mouseY, expandBounds) ? GuiExtensions.ActiveButtonTextColor : GuiExtensions.DialogDefaultTextColor;
+							xOffset += (float)GetConstantExpandOffset();
 
 							api.Render.Render2DTexturePremultipliedAlpha(
 								tex.TextureId,
-								bounds.X,
-								bounds.Y,
-								bounds.Z,
-								bounds.W,
+								expandBounds.X,
+								expandBounds.Y,
+								expandBounds.Z,
+								expandBounds.W,
 								50.0f,
 								color
 								);
@@ -302,7 +296,7 @@ namespace Instruments.GUI
 						}
 
 
-						element.RenderListEntryTo(api, deltaTime, xOffset, num4, Bounds.InnerWidth, cellHeight);
+						element.RenderListEntryTo(api, deltaTime, xOffset, posY, Bounds.InnerWidth, cellHeight);
 					}
 
 					absY += GuiElement.scaled(unscaledCellHeight + unscaledCellSpacing);
