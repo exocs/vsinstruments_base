@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Vintagestory.API.Client;
 using Vintagestory.GameContent;
 using Instruments.Files;
+using Instruments.Players;
 
 namespace Instruments.GUI
 {
@@ -63,6 +65,8 @@ namespace Instruments.GUI
 			public const string LocationText = "locationText";
 
 			public const string SearchTextInput = "searchTextInput";
+
+			public const string DetailsText = "detailsText";
 		}
 
 		private GuiElementFlatList TreeList
@@ -110,6 +114,13 @@ namespace Instruments.GUI
 				return SingleComposer.GetTextInput(Keys.SearchTextInput);
 			}
 		}
+		private GuiElementRichtext DetailsText
+		{
+			get
+			{
+				return SingleComposer.GetRichtext(Keys.DetailsText);
+			}
+		}
 		//
 		// Summary:
 		//     Create new song selection GUI with root path at the provided directory path.
@@ -155,18 +166,20 @@ namespace Instruments.GUI
 			const double topBarHeight = 40;
 			const double leftPaneWidth = 250;
 			const double rightPaneWidth = 500;
-			const double paneHeight = 400;
+			const double paneHeight = 600;
+			const double detailsPaneWidth = 300.0f;
 
 			// Base dialog background
 			ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog
 				.WithAlignment(EnumDialogArea.CenterMiddle);
 
 			// Address may be long and so it will span the entire left column and 50% of the right column
-			ElementBounds addressBarBounds = ElementBounds.Fixed(padding, padding, leftPaneWidth + 0.5f * rightPaneWidth, 32);
+			// The magical (+8) is just an effort to center it better, otherwise it looks really poorly.
+			ElementBounds addressBarBounds = ElementBounds.Fixed(0.5 * padding, padding + 8, leftPaneWidth + rightPaneWidth + 4 * padding, 32);
 
 			// Search bar will (hopefully) in most cases suffice with few characters or words, make it only half of the remaining width
-			ElementBounds searchBarBounds = ElementBounds.Fixed(0, padding, 0.5 * rightPaneWidth, 32)
-				.FixedRightOf(addressBarBounds, padding);
+			ElementBounds searchBarBounds = ElementBounds.Fixed(0, padding + 4, detailsPaneWidth, 32)
+				.FixedRightOf(addressBarBounds, 0);
 
 			// Content area below the navigation bar
 			ElementBounds contentBounds = ElementBounds.Fixed(
@@ -177,7 +190,8 @@ namespace Instruments.GUI
 			);
 
 			// Tree view left pane
-			ElementBounds treePaneBounds = ElementBounds.Fixed(0, 0, leftPaneWidth, paneHeight)
+			// The magical (-50% padding) offset is just an effort to center the entire layout somewhat
+			ElementBounds treePaneBounds = ElementBounds.Fixed(-0.5 * padding, 0, leftPaneWidth, paneHeight)
 				.WithFixedOffset(contentBounds.fixedX, contentBounds.fixedY);
 
 			// Tree view scrollbar
@@ -190,7 +204,7 @@ namespace Instruments.GUI
 
 			// Content view pane
 			ElementBounds contentPaneBounds = ElementBounds.Fixed(
-				treeScrollbarBounds.fixedX + treeScrollbarBounds.fixedWidth + 10,
+				treeScrollbarBounds.fixedX + treeScrollbarBounds.fixedWidth + padding,
 				contentBounds.fixedY,
 				rightPaneWidth,
 				paneHeight
@@ -204,13 +218,22 @@ namespace Instruments.GUI
 				contentPaneBounds.fixedHeight
 			);
 
+			// Details panel
+			ElementBounds detailsPaneBounds = ElementBounds.Fixed(
+				contentScrollbarBounds.fixedX + contentScrollbarBounds.fixedWidth + padding, // place right of content scrollbar
+				contentBounds.fixedY,
+				detailsPaneWidth,
+				paneHeight
+			);
+
 			// Background
 			ElementBounds bgBounds = ElementBounds.Fill.WithFixedPadding(padding);
 			bgBounds.BothSizing = ElementSizing.FitToChildren;
 			bgBounds.WithChildren(
 				addressBarBounds, searchBarBounds,
 				treePaneBounds, treeScrollbarBounds,
-				contentPaneBounds, contentScrollbarBounds
+				contentPaneBounds, contentScrollbarBounds,
+				detailsPaneBounds
 			);
 
 			// Begin composing
@@ -245,6 +268,8 @@ namespace Instruments.GUI
 
 						}, contentScrollbarBounds, contentPaneBounds, Keys.ContentScrollBar)
 
+						.AddRichtext(string.Empty, CairoFont.WhiteDetailText(), detailsPaneBounds, Keys.DetailsText)
+
 					.EndChildElements()
 					.Compose();
 
@@ -252,8 +277,8 @@ namespace Instruments.GUI
 			if (bandNameChange != null)
 				UpdateBand(bandName);
 
-			// Initial refresh to get up-to-date state.
-			RefreshContent(true, true);
+			// Initialize as if we selected the root node, if any
+			SelectTreeNode(_fileTree.Root);
 		}
 		//
 		// Summary:
@@ -301,14 +326,41 @@ namespace Instruments.GUI
 			// to be changed. Drop the.
 			_textFilter = string.Empty;
 			SearchTextInput.SetValue(string.Empty);
+			SearchTextInput.SetPlaceHolderText(node == null ? "Search..." : $"Search in {node.Name}...");
+
+			// On tree change the content needs to be cleared out
+			SelectContentNode(null);
 
 			// And make sure to apply refresh the content of the tree if necessary 
-			RefreshContent(true, true);
+			RefreshContent(true, true, true);
+		}
+		//
+		// Summary:
+		//     Selects the provided tree node in the tree view.
+		//     Propagates changes to content selection as well!
+		private void SelectContentNode(FileTree.Node node)
+		{
+			// Make sure to clear and unselect the previous entry!
+			if (_contentSelection != null)
+			{
+				_contentSelection.IsSelected = false;
+				_contentSelection = null;
+			}
+
+			// Store the new selection and mark it as selected
+			// before refreshing the details pane with information.
+			_contentSelection = node;
+			if (_contentSelection != null)
+			{
+				_contentSelection.IsSelected = true;
+			}
+
+			RefreshContent(false, false, true);
 		}
 		//
 		// Summary:
 		//     Refreshes all content state, e.g. the lists and the dimensions of their scroll bars.
-		protected void RefreshContent(bool refreshTree = true, bool refreshContent = false)
+		protected void RefreshContent(bool refreshTree = true, bool refreshContent = false, bool refreshDetails = false)
 		{
 			if (refreshTree)
 			{
@@ -356,6 +408,21 @@ namespace Instruments.GUI
 
 				UpdateScrollBarSize(ContentList, ContentListScrollBar);
 			}
+
+			if (refreshDetails)
+			{
+				FileTree.Node content = _contentSelection;
+				if (content == null)
+				{
+					DetailsText.SetNewText(Array.Empty<RichTextComponent>());
+					return;
+				}
+				else
+				{
+					RichTextComponent[] components = BuildDetails(content);
+					DetailsText.SetNewText(components);
+				}
+			}
 		}
 		//
 		// Summary:
@@ -382,8 +449,7 @@ namespace Instruments.GUI
 		//     Raised when an item is clicked on in the content view.
 		private void OnContentElementLeftClick(int index)
 		{
-			FileTree.Node node = _contentNodes[index];
-			capi.ShowChatMessage("Selected file: " + node.FullPath);
+			SelectContentNode(_contentNodes[index]);
 		}
 		//
 		// Summary:
@@ -392,6 +458,72 @@ namespace Instruments.GUI
 		{
 			_textFilter = textFilter;
 			RefreshContent(false, true);
+		}
+		//
+		// Summary:
+		//     Builds details string for the provided node.
+		private RichTextComponent[] BuildDetails(FileTree.Node node)
+		{
+			List<RichTextComponent> components = new List<RichTextComponent>();
+			CairoFont leftFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Left);
+			CairoFont rightFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Right);
+			void addComponent(string left, string right, int rightMaxLen = 33)
+			{
+				components.Add(new RichTextComponent(capi, left + ":", leftFont));
+
+				// Clamp the length to sensible values
+				if (right.Length > rightMaxLen)
+				{
+					right = right.Substring(0, rightMaxLen - 3);
+					right = string.Concat(right, "...");
+				}
+
+				components.Add(new RichTextComponent(capi, right + Environment.NewLine, rightFont));
+			}
+
+			addComponent("Name", node.Name);
+			addComponent("Path", node.DirectoryPath);
+
+			FileInfo fileInfo = new FileInfo(node.FullPath);
+			if (fileInfo != null)
+			{
+				addComponent("Size", $"{fileInfo.Length / 1000.0f:0.00} kB");
+				addComponent("Created", $"{fileInfo.CreationTime}");
+				addComponent("Extension", $"{fileInfo.Extension}");
+			}
+
+			string midiFormat(int v)
+			{
+				switch (v)
+				{
+					case 0:
+						return "Single track";
+					case 1:
+						return "Multi track";
+					case 2:
+						return "Multi song";
+
+					default:
+						return "Unknown";
+				}
+			}
+
+			try
+			{
+				MidiParser.MidiFile parser = new MidiParser.MidiFile(fileInfo.FullName);
+				addComponent("Format", midiFormat(parser.Format));
+				addComponent("Tracks", $"{parser.TracksCount}");
+				addComponent("BPM", $"{parser.ReadBPM()}");
+				TimeSpan duration = TimeSpan.FromSeconds(parser.ReadMaxTrackDuration());
+				addComponent("Duration", $"{duration}");
+				// TODO: Midi details here
+			}
+			catch
+			{
+				addComponent("Format", "Unknown/Unsupported");
+			}
+
+			return components.ToArray();
 		}
 
 		public void UpdateBand(string bandName)

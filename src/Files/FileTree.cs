@@ -57,6 +57,16 @@ namespace Instruments.Files
 			}
 			//
 			// Summary:
+			//     Absolute path to the directory this object lies in.
+			public string DirectoryPath
+			{
+				get
+				{
+					return Path.GetDirectoryName(FullPath);
+				}
+			}
+			//
+			// Summary:
 			//     Name of this object, including its extensions.
 			public string Name { get; private set; }
 			//
@@ -379,7 +389,7 @@ namespace Instruments.Files
 			{
 				Texture?.Dispose();
 
-				CairoFont font = CairoFont.WhiteSmallText();
+				CairoFont font = CairoFont.WhiteDetailText();
 				if (IsSelected)
 				{
 					font.Color = GuiStyle.ActiveButtonTextColor;

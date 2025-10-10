@@ -10,13 +10,8 @@ namespace Instruments.Players
 	//
 	// Summary:
 	//     Allows opening and playing back a MIDI file.
-	public class MusicPlayerMIDI
+	public class MusicPlayerMidi
 	{
-		//
-		// Summary:
-		//     Default, fallback beats per minute as specified by the standard.
-		private const int DefaultBPM = 120;
-
 		private ICoreAPI _coreAPI;
 		private InstrumentType _instrumentType;
 
@@ -74,36 +69,6 @@ namespace Instruments.Players
 		}
 		//
 		// Summary:
-		//     Find the meta event that denotes the tempo for playback of this
-		//     player in one of the provided channels.
-		//
-		// Parameters:
-		//   tracks: Tracks to search for the event in.
-		//   defaultValue: Default value of beats per minute if no event is found.
-		private int GetBeatsPerMinute(MidiTrack[] tracks, int defaultValue)
-		{
-			// The MIDI file should contain a track with the timing meta event,
-			// that will contain the quarter notes per microseconds value, which
-			// is converted into BPM in the MidiParser and used for playback timing.
-			foreach (MidiTrack track in tracks)
-			{
-				foreach (MidiEvent midiEvent in track.MidiEvents)
-				{
-					if (midiEvent.Time > 0)
-						break;
-
-					if (midiEvent.MidiEventType == MidiEventType.MetaEvent &&
-						midiEvent.MetaEventType == MetaEventType.Tempo)
-					{
-						return midiEvent.Arg2;
-					}
-				}
-			}
-
-			return defaultValue;
-		}
-		//
-		// Summary:
 		//     Returns the duration of this track in ticks.
 		private int GetDuration(MidiTrack track)
 		{
@@ -124,8 +89,7 @@ namespace Instruments.Players
 		//   time: Time in (elapsed) seconds to convert to ticks.
 		private long TimeToTicks(double seconds)
 		{
-			double secondsPerQuarterNote = 60.0 / (double)_beatsPerMinute;
-			return (long)(seconds * (_ticksPerQuarterNote / secondsPerQuarterNote));
+			return MidiExtensions.TimeToTicks(seconds, _beatsPerMinute, _ticksPerQuarterNote);
 		}
 		//
 		// Summary:
@@ -135,8 +99,7 @@ namespace Instruments.Players
 		//   ticks: Ticks to convert to (elapsed) time in seconds.
 		private double TicksToTime(long ticks)
 		{
-			double secondsPerQuarterNote = 60.0 / (double)_beatsPerMinute;
-			return ticks * (secondsPerQuarterNote / _ticksPerQuarterNote);
+			return MidiExtensions.TicksToTime(ticks, _beatsPerMinute, _ticksPerQuarterNote);
 		}
 		//
 		// Summary:
@@ -155,7 +118,7 @@ namespace Instruments.Players
 
 			_midiTrack = midi.Tracks[channel];
 
-			_beatsPerMinute = GetBeatsPerMinute(midi.Tracks, DefaultBPM);
+			_beatsPerMinute = midi.ReadBPM();
 			_ticksPerQuarterNote = midi.TicksPerQuarterNote;
 
 			_elapsedTime = 0;
@@ -242,7 +205,7 @@ namespace Instruments.Players
 
 			_midiTrack = null;
 
-			_beatsPerMinute = DefaultBPM;
+			_beatsPerMinute = MidiExtensions.DefaultBPM;
 			_ticksPerQuarterNote = 0;
 
 			_elapsedTime = 0;
@@ -258,7 +221,7 @@ namespace Instruments.Players
 			PlaySound(pitch, channel, time);
 		}
 
-		public MusicPlayerMIDI(ICoreAPI api, InstrumentType instrumentType)
+		public MusicPlayerMidi(ICoreAPI api, InstrumentType instrumentType)
 		{
 			_coreAPI = api;
 			_instrumentType = instrumentType;
