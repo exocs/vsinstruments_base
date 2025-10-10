@@ -7,55 +7,6 @@ using Vintagestory.GameContent;
 
 namespace Instruments.GUI
 {
-	internal static class GuiExt
-	{
-		// The scrollbar only ever checks Y axis.
-		// This little hack exists so it also checks X axis in bounds check,
-		// but also it will use provided content's bounds to "retain" the original functionality
-		// TODO@exocs: Move this out to some utility GUI class
-		private class GuiElementScrollbarEx : GuiElementScrollbar
-		{
-			private ElementBounds _contentBounds;
-
-			public GuiElementScrollbarEx(ICoreClientAPI capi, Action<float> onNewScrollbarValue, ElementBounds bounds, ElementBounds contentBounds)
-				: base(capi, onNewScrollbarValue, bounds)
-			{
-				_contentBounds = contentBounds;
-			}
-
-			public override void OnMouseWheel(ICoreClientAPI api, MouseWheelEventArgs args)
-			{
-				double mX = api.Input.MouseX, mY = api.Input.MouseY;
-				if (!Bounds.PointInside(mX, mY))
-				{
-					if (_contentBounds != null)
-					{
-						// Not even in contnet!
-						_contentBounds.CalcWorldBounds();
-						if (!_contentBounds.PointInside(mX, mY))
-							return;
-					}
-					else
-					{
-						return;
-					}
-				}
-
-				base.OnMouseWheel(api, args);
-			}
-		}
-
-		public static GuiComposer AddVerticalScrollbarEx(this GuiComposer composer, Action<float> onNewScrollbarValue, ElementBounds bounds, ElementBounds contentBound = null, string key = null)
-		{
-			if (!composer.Composed)
-			{
-				composer.AddInteractiveElement(new GuiElementScrollbarEx(composer.Api, onNewScrollbarValue, bounds, contentBound), key);
-			}
-
-			return composer;
-		}
-	}
-
 	public class SongSelectGUI : GuiDialog
 	{
 
