@@ -85,6 +85,20 @@ namespace Instruments.Files
 			}
 			//
 			// Summary:
+			//     Returns whether this node has any subdirectories.
+			public int ChildDirectoryCount
+			{
+				get
+				{
+					int count = 0;
+					for (int i = 0; i < _children.Count; ++i)
+						if (_children[i].IsDirectory) ++count;
+
+					return count;
+				}
+			}
+			//
+			// Summary:
 			//     Children objects of this node.
 			public IReadOnlyCollection<Node> Children
 			{
@@ -235,6 +249,7 @@ namespace Instruments.Files
 			{
 				Name = Path.GetFileName(fullPath);
 				IsDirectory = Directory.Exists(fullPath);
+				IsExpanded = IsDirectory;//start expanded if directory?
 				_children = new List<Node>();
 				Parent = null;
 			}
@@ -338,6 +353,17 @@ namespace Instruments.Files
 			}
 			//
 			// Summary:
+			//     Finds nodes by their name in direct children.
+			public void FindChildren(string name, List<Node> destination, StringComparison stringComparison = StringComparison.OrdinalIgnoreCase)
+			{
+				foreach (Node child in Children)
+				{
+					if (string.Compare(child.Name, name, StringComparison.OrdinalIgnoreCase) == 0)
+						destination.Add(child);
+				}
+			}
+			//
+			// Summary:
 			//     Returns whether this node is visibile in the flat list.
 			public bool Visible
 			{
@@ -346,19 +372,6 @@ namespace Instruments.Files
 					return true;
 				}
 			}
-			
-			/*
-			 TODO: This will require some additional context?
-			private string GetGuiLabel()
-			{
-				char symbol = ' ';
-				//if (IsDirectory && IsExpanded)
-				//	symbol = '▼';
-				//else
-				//	symbol = '►';
-
-				return string.Concat(new string(' ', Depth), symbol, ' ', Name);
-			*/
 			//
 			// Summary:
 			//     Recomposes the GUI for this node.

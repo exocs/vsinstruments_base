@@ -1,5 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using Vintagestory.API.Client;
+using Vintagestory.API.MathTools;
+using Vintagestory.GameContent;
+using Instruments.Files;
 
 namespace Instruments.GUI
 {
@@ -57,6 +62,264 @@ namespace Instruments.GUI
 	}
 	//
 	// Summary:
+	//     This class only exists as a workaround to allow convenient way of handling file tree node view.
+	//     It attempts to draw and handle the expand button as part of the element, raising the onExpandClick
+	//     action if an item in the collection has the expand clicked.
+	class GuiElementFlatListEx : GuiElementFlatList
+	{
+		private ICoreClientAPI ClientAPI { get; set; }
+		//
+		// Summary:
+		//     Texture representing an expanded item in the tree, typically an arrow pointing down.
+		private LoadedTexture ExpandedTexture { get; set; }
+		//
+		// Summary:
+		//     Texture representing an expanded item in the tree, typically an arrow pointing right.
+		private LoadedTexture CollapsedTexture { get; set; }
+		//
+		// Summary:
+		//     Texture used to draw hover over overlay; not managed by this class, do not dispose manually!
+		private LoadedTexture HoverOverlayTexture { get; set; }
+		//
+		// Summary:
+		//     Callback raised when the expand/collapse button is clicked.
+		private Action<int> OnExpandClick { get; set; }
+		//
+		// Summary:
+		//     Whether a button was pressed over an element during last event.
+		private bool WasMouseDownOnElement { get; set; }
+		//
+		// Summary:
+		//     Whether the composition needs recomposing.
+		private bool RecomposeNeeded
+		{
+			get
+			{
+				return ExpandedTexture == null
+					|| CollapsedTexture == null
+					|| HoverOverlayTexture == null
+					|| Bounds.RequiresRecalculation;
+			}
+		}
+		//
+		// Summary:
+		//     Creates new flat extended flat list, that is actually a tree list. Oops!
+		public GuiElementFlatListEx(ICoreClientAPI capi, ElementBounds bounds, Action<int> onLeftClick, Action<int> onExpandClick, List<IFlatListItem> elements = null)
+			: base(capi, bounds, onLeftClick, elements)
+		{
+			ClientAPI = api;
+			OnExpandClick = onExpandClick;
+		}
+		//
+		// Summary:
+		//     Recomposes the GUI for this node.
+		public void Recompose(ICoreClientAPI capi)
+		{
+			ExpandedTexture?.Dispose();
+			CollapsedTexture?.Dispose();
+
+			ExpandedTexture = GenTextTexture('▼');
+			CollapsedTexture = GenTextTexture('►');
+
+			// This is very dirty, but so is the entirety of this class, sorry. Trying to keep it as close
+			// to "vanilla" flat list, but ugh. Worst case scenario it simply won't have a texture on hover.
+			FieldInfo field = typeof(GuiElementFlatList).GetField(
+					"hoverOverlayTexture",
+					BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy
+				);
+			if (field != null)
+			{
+				HoverOverlayTexture = (LoadedTexture)field.GetValue(this);
+			}
+		}
+		//
+		// Summary:
+		//     Generates text texture for provided symbol.
+		private LoadedTexture GenTextTexture(char symbol)
+		{
+			CairoFont font = CairoFont.WhiteSmallText();
+			return new TextTextureUtil(ClientAPI).GenTextTexture($"{symbol}", font);
+		}
+		//
+		// Summary:
+		//     Handles mouse downs on elements.
+		public override void OnMouseDownOnElement(ICoreClientAPI api, MouseEvent args)
+		{
+			if (Bounds.ParentBounds.PointInside(args.X, args.Y))
+			{
+				base.OnMouseDownOnElement(api, args);
+				WasMouseDownOnElement = true;
+			}
+		}
+		//
+		// Summary:
+		//     Handles mouse ups on elements and determines whether the expand or the actual item were pressed.
+		public override void OnMouseUpOnElement(ICoreClientAPI api, MouseEvent args)
+		{
+			if (!Bounds.ParentBounds.PointInside(args.X, args.Y) || !WasMouseDownOnElement)
+			{
+				return;
+			}
+
+			WasMouseDownOnElement = false;
+			int index = 0;
+			int mouseX = api.Input.MouseX;
+			int mouseY = api.Input.MouseY;
+			double absY = insideBounds.absY;
+			foreach (IFlatListItem element in Elements)
+			{
+				if (!element.Visible)
+				{
+					index++;
+					continue;
+				}
+
+				float posY = (float)(5.0 + Bounds.absY + absY);
+				double padY = GuiElement.scaled(unscalledYPad);
+
+				// Item clicked
+				if ((double)mouseX > Bounds.absX && (double)mouseX <= Bounds.absX + Bounds.InnerWidth && (double)mouseY >= (double)posY - padY && (double)mouseY <= (double)posY + GuiElement.scaled(unscaledCellHeight) - padY)
+				{
+					// Now that we know we are inside of the entire item bounds,
+					// we can find its depth and interecpt this event if the expand
+					// button is pressed, raising the onExpandClick instead.
+					if (element is FileTree.Node node)
+					{
+						Vec4f b = GetExpandButtonBounds(posY, node.Depth);
+						if (GuiExtensions.IsInside(mouseX, mouseY, b))
+						{
+							api.Gui.PlaySound("menubutton_press");
+							OnExpandClick?.Invoke(index);
+							args.Handled = true;
+							break;
+						}
+					}
+
+					api.Gui.PlaySound("menubutton_press");
+					onLeftClick?.Invoke(index);
+					args.Handled = true;
+					break;
+				}
+
+				absY += GuiElement.scaled(unscaledCellHeight + unscaledCellSpacing);
+				index++;
+			}
+		}
+		//
+		// Summary:
+		//     Returns the base (constant) offset for the expand element.
+		double GetConstantExpandOffset()
+		{
+			return GuiElement.scaled(16);
+		}
+		//
+		// Summary:
+		//     Returns bounds for the "expand" area.
+		private Vec4f GetExpandButtonBounds(float posY, int depth)
+		{
+			int width, height;
+			if (ExpandedTexture != null)
+			{
+				width = ExpandedTexture.Width;
+				height = ExpandedTexture.Height;
+			}
+			else
+			{
+				width = 16;
+				height = 16;
+			}
+
+			int offset = depth * width;
+
+			return new Vec4f(
+				(float)(Bounds.absX + offset),
+				posY + (0.25f * height),
+				width,
+				height);
+		}
+
+		public override void RenderInteractiveElements(float deltaTime)
+		{
+			// Recompose elements needed for drawing
+			if (RecomposeNeeded)
+			{
+				Recompose(ClientAPI);
+			}
+
+			int mouseX = api.Input.MouseX;
+			int mouseY = api.Input.MouseY;
+			bool inside = Bounds.ParentBounds.PointInside(mouseX, mouseY);
+			double absY = insideBounds.absY;
+			double padY = GuiElement.scaled(unscalledYPad);
+			double cellHeight = GuiElement.scaled(unscaledCellHeight);
+			foreach (IFlatListItem element in Elements)
+			{
+				FileTree.Node node = element as FileTree.Node;
+
+				if (element.Visible)
+				{
+					// Definitely should be added
+					float num4 = (float)(5.0 + Bounds.absY + absY);
+					if (inside && (double)mouseX > Bounds.absX && (double)mouseX <= Bounds.absX + Bounds.InnerWidth && (double)mouseY >= (double)num4 - padY && (double)mouseY <= (double)num4 + cellHeight - padY)
+					{
+						if (HoverOverlayTexture != null)
+							api.Render.Render2DLoadedTexture(HoverOverlayTexture, (float)Bounds.absX, num4 - (float)padY);
+					}
+
+					// Folder expanded?
+					//int depth = node.Depth;
+
+
+					if (absY > -50.0 && absY < Bounds.OuterHeight + 50.0)
+					{
+						//int symbolOffset = ExpandedTexture.Width + 4;
+						//int offset = node.Depth * 4;
+
+						float xOffset = 0;
+						if (node.ChildDirectoryCount > 0)//Currently only folders, but ugh
+						{
+							LoadedTexture tex = node.IsExpanded ? ExpandedTexture : CollapsedTexture;
+
+							Vec4f bounds = GetExpandButtonBounds(num4, node.Depth);
+							Vec4f color = GuiExtensions.IsInside(mouseX, mouseY, bounds) ? GuiExtensions.ActiveButtonTextColor : GuiExtensions.DialogDefaultTextColor;
+							xOffset += bounds.X + (float)GetConstantExpandOffset();
+
+							api.Render.Render2DTexturePremultipliedAlpha(
+								tex.TextureId,
+								bounds.X,
+								bounds.Y,
+								bounds.Z,
+								bounds.W,
+								50.0f,
+								color
+								);
+
+
+						}
+						else
+						{
+							xOffset += (float)GetConstantExpandOffset();
+						}
+
+
+						element.RenderListEntryTo(api, deltaTime, xOffset, num4, Bounds.InnerWidth, cellHeight);
+					}
+
+					absY += GuiElement.scaled(unscaledCellHeight + unscaledCellSpacing);
+				}
+			}
+		}
+
+		public override void Dispose()
+		{
+			CollapsedTexture?.Dispose();
+			ExpandedTexture?.Dispose();
+
+			base.Dispose();
+		}
+	}
+	//
+	// Summary:
 	//     This class implements GUI extensions methods similarly to follow the game convention.
 	internal static class GuiExtensions
 	{
@@ -72,6 +335,64 @@ namespace Instruments.GUI
 			}
 
 			return composer;
+		}
+		//
+		// Summary:
+		//     Creates new flat list element that has covers additional functionality regarding expanding and collapsing file tree nodes.
+		public static GuiComposer AddFlatListEx(this GuiComposer composer, ElementBounds bounds, Action<int> onleftClick = null, Action<int> onExpandClick = null, List<IFlatListItem> stacks = null, string key = null)
+		{
+			if (!composer.Composed)
+			{
+				composer.AddInteractiveElement(new GuiElementFlatListEx(composer.Api, bounds, onleftClick, onExpandClick, stacks), key);
+			}
+
+			return composer;
+		}
+		//
+		// Summary:
+		//     Returns whether point (x,y) is specified within bounds.
+		public static bool IsInside(float ptX, float ptY, float posX, float posY, float width, float height)
+		{
+			bool isInside = ptX >= posX && ptX < posX + width &&
+							ptY >= posY && ptY < posY + height;
+			return isInside;
+		}
+		//
+		// Summary:
+		//     Returns whether point (x,y) is specified within bounds.
+		public static bool IsInside(float ptX, float ptY, Vec4f bounds)
+		{
+			return IsInside(ptX, ptY, bounds.X, bounds.Y, bounds.Z, bounds.W);
+		}
+		//
+		// Summary:
+		//     Returns the GuiStyle ActiveButtonTextColor as a vector.
+		public static Vec4f ActiveButtonTextColor
+		{
+			get
+			{
+				return new Vec4f(
+					(float)GuiStyle.ActiveButtonTextColor[0],
+					(float)GuiStyle.ActiveButtonTextColor[1],
+					(float)GuiStyle.ActiveButtonTextColor[2],
+					(float)GuiStyle.ActiveButtonTextColor[3]
+					);
+			}
+		}
+		//
+		// Summary:
+		//     Returns the GuiStyle ActiveButtonTextColor as a vector.
+		public static Vec4f DialogDefaultTextColor
+		{
+			get
+			{
+				return new Vec4f(
+					(float)GuiStyle.DialogDefaultTextColor[0],
+					(float)GuiStyle.DialogDefaultTextColor[1],
+					(float)GuiStyle.DialogDefaultTextColor[2],
+					(float)GuiStyle.DialogDefaultTextColor[3]
+					);
+			}
 		}
 	}
 }
