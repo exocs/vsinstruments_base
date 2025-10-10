@@ -624,8 +624,12 @@ namespace Instruments.Files
 			Node node = Find(args.OldFullPath);
 			if (node != null && args.Name != null)
 			{
-				node.Rename(args.Name);
-				NodeRenamed?.Invoke(node, args.OldName, args.Name);
+				string newName = Path.GetFileName(args.Name);
+				string oldName = node.Name;
+
+				node.Rename(newName);
+				NodeRenamed?.Invoke(node, oldName, newName);
+
 				if (node.Parent != null)
 				{
 					// Since this node was renamed, the parent
