@@ -385,11 +385,13 @@ namespace Instruments.Files
 				}
 
 				// No arbitrary scales or shenanigans here, this item needs to be drawn directly
-				// into the list cell. Use the provided dimensions to center the image vertically
-				double yPad = (cellHeight - Texture.Height) / 2.0;
+				// into the list cell. Use the provided dimensions to draw the image, but make sure
+				// to center it. It seemed to make sense to use the half offset, but after some observations,
+				// it seems that only offseting it by 25% actually centers it almost perfectly? ._.
+				double yPad = (cellHeight - Texture.Height) / 4.0;
 				// and add slight padding from the left, otherwise the text gets very close to the
 				// boundaries of the list which is very unpleasant
-				double xPad = 4.0f;
+				double xPad = GuiElement.scaled(5.0f);
 
 				capi.Render.Render2DTexturePremultipliedAlpha(
 				Texture.TextureId,
