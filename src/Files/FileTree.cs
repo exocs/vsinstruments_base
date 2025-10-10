@@ -378,19 +378,23 @@ namespace Instruments.Files
 			//     Renders this node as a list entry.
 			public void RenderListEntryTo(ICoreClientAPI capi, float dt, double x, double y, double cellWidth, double cellHeight)
 			{
-				float size = (float)GuiElement.scaled(25);
-				float pad = (float)GuiElement.scaled(10);
-
 				if (Texture == null || IsDirty)
 				{
 					Recompose(capi);
 					IsDirty = false;
 				}
 
+				// No arbitrary scales or shenanigans here, this item needs to be drawn directly
+				// into the list cell. Use the provided dimensions to center the image vertically
+				double yPad = (cellHeight - Texture.Height) / 2.0;
+				// and add slight padding from the left, otherwise the text gets very close to the
+				// boundaries of the list which is very unpleasant
+				double xPad = 4.0f;
+
 				capi.Render.Render2DTexturePremultipliedAlpha(
 				Texture.TextureId,
-				(x + pad),
-				y + size / 4 - GuiElement.scaled(3),
+				x + xPad,
+				y + yPad,
 				Texture.Width,
 				Texture.Height,
 				50

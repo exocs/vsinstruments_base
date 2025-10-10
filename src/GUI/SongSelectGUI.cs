@@ -220,12 +220,9 @@ namespace Instruments.GUI
 			if (stacklist == null || scrollbar == null)
 				return;
 
-
-			float rowHeight = (float)GuiElement.scaled(stacklist.unscaledCellHeight);
+			float rowHeight = (float)GuiElement.scaled(stacklist.unscaledCellHeight + stacklist.unscaledCellSpacing);
 			float scrollTotalHeight = rowHeight * numRows;
-			// TODO@exocs: Is the list height represented by a prop of the flat list anywhere?
-			// also drop the stacklist naming
-			float scrollVisibleHeight = (float)(this.listHeight - 6); // pane height
+			float scrollVisibleHeight = (float)(stacklist.Bounds.fixedHeight);
 			scrollbar.SetHeights(scrollVisibleHeight, scrollTotalHeight);
 		}
 
