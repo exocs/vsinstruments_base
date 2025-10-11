@@ -536,7 +536,9 @@ namespace Instruments.GUI
 			CairoFont leftFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Left);
 			CairoFont rightFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Right);
 
-			void addComponent(string left, string right, bool addNewLine = true, int rightMaxLen = 33)
+			const int rightTextMaxLen = 33;
+
+			void addComponent(string left, string right, bool addNewLine = true, int rightMaxLen = rightTextMaxLen)
 			{
 				//var newcomponents = VtmlUtil.Richtextify(capi, left, leftFont);
 				components.Add(new RichTextComponent(capi, left, leftFont));
@@ -589,14 +591,40 @@ namespace Instruments.GUI
 				}));
 				components.Add(new RichTextComponent(capi, Environment.NewLine, leftFont));
 			}
+			void addPathComponent(string left, string filePath, int rightMaxLen = rightTextMaxLen)
+			{
+				//var newcomponents = VtmlUtil.Richtextify(capi, left, leftFont);
+				components.Add(new RichTextComponent(capi, left, leftFont));
+
+				// Clamp the length to sensible values
+				string rightText = filePath;
+				if (rightText.Length > rightMaxLen)
+				{
+					rightText = rightText.Substring(0, rightMaxLen - 3);
+					rightText = string.Concat(rightText, "...");
+				}
+
+				// Is it playing?
+				components.Add(new LinkTextComponent(capi, rightText, rightFont, (txc) =>
+				{
+					capi.Gui.PlaySound("menubutton_press");
+					System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo()
+					{
+						FileName = filePath,
+						UseShellExecute = true,
+						Verb = "open"
+					});
+				}));
+
+				components.Add(new RichTextComponent(capi, Environment.NewLine, leftFont));
+			}
 
 			addComponent("Name:", node.Name);
-			addComponent("Path:", node.DirectoryPath);
+			addPathComponent("Path:", node.DirectoryPath);
 
 			FileInfo fileInfo = new FileInfo(node.FullPath);
 			if (fileInfo != null)
 			{
-
 				addComponent("Size:", $"{fileInfo.Length / 1000.0f:0.00} kB");
 				addComponent("Created:", $"{fileInfo.CreationTime}");
 				addComponent("Extension:", $"{fileInfo.Extension}");
