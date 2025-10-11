@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Vintagestory.API.Client;
 using Vintagestory.GameContent;
+using Instruments.GUI;
 
 namespace Instruments.Files
 {
@@ -27,7 +28,7 @@ namespace Instruments.Files
 		//
 		// Summary:
 		//     A single node representing a file or a directory.
-		public class Node : IFlatListItem
+		public class Node : IFlatListItem, IFlatListExpandable
 		{
 			[Flags]
 			private enum NodeFlags : byte

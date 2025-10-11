@@ -65,7 +65,7 @@ namespace Instruments.GUI
 	//     This class only exists as a workaround to allow convenient way of handling file tree node view.
 	//     It attempts to draw and handle the expand button as part of the element, raising the onExpandClick
 	//     action if an item in the collection has the expand clicked.
-	class GuiElementFlatListEx : GuiElementFlatList
+	internal class GuiElementFlatListEx : GuiElementFlatList
 	{
 		private ICoreClientAPI ClientAPI { get; set; }
 		//
@@ -254,8 +254,6 @@ namespace Instruments.GUI
 			double cellHeight = GuiElement.scaled(unscaledCellHeight);
 			foreach (IFlatListItem element in Elements)
 			{
-				FileTree.Node node = element as FileTree.Node;
-
 				if (element.Visible)
 				{
 					// Definitely should be added
@@ -268,11 +266,13 @@ namespace Instruments.GUI
 
 					if (absY > -50.0 && absY < Bounds.OuterHeight + 50.0)
 					{
-						Vec4f expandBounds = GetExpandButtonBounds(posY, node.Depth);
+						IFlatListExpandable expandable = element as IFlatListExpandable;
+
+						Vec4f expandBounds = GetExpandButtonBounds(posY, expandable.Depth);
 						float xOffset = expandBounds.X;
-						if (node.ChildDirectoryCount > 0)//Currently only folders, but ugh
+						if (expandable is not FileTree.Node node || node.ChildDirectoryCount > 0)//Currently only folders, but ugh
 						{
-							LoadedTexture tex = node.IsExpanded ? ExpandedTexture : CollapsedTexture;
+							LoadedTexture tex = expandable.IsExpanded ? ExpandedTexture : CollapsedTexture;
 
 
 							Vec4f color = GuiExtensions.IsInside(mouseX, mouseY, expandBounds) ? GuiExtensions.ActiveButtonTextColor : GuiExtensions.DialogDefaultTextColor;
@@ -311,6 +311,20 @@ namespace Instruments.GUI
 
 			base.Dispose();
 		}
+	}
+	//
+	// Summary:
+	//     Interface for objects that can be drawn as expandable in the flat list ex.
+	public interface IFlatListExpandable
+	{
+		//
+		// Summary:
+		//     Whether this item is expanded or not.
+		public bool IsExpanded { get; }
+		//
+		// Summary:
+		//     The depth of this item in the parent tree.
+		public int Depth { get; }
 	}
 	//
 	// Summary:
