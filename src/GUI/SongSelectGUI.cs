@@ -61,6 +61,10 @@ namespace Instruments.GUI
 		private MusicPlayerMidi _previewMusicPlayer;
 		//
 		// Summary:
+		//     Currently active track by its index.
+		private int _activeTrack = -1;
+		//
+		// Summary:
 		//     Convenience wrapper for all text constants of individual Gui elements for this menu.
 		private struct Keys
 		{
@@ -301,7 +305,7 @@ namespace Instruments.GUI
 						}, contentScrollbarBounds, contentPaneBounds, Keys.ContentScrollBar)
 
 						.BeginClip(detailsPaneBounds.ForkBoundingParent())
-							.AddRichtext(string.Empty, CairoFont.WhiteDetailText(), detailsPaneBounds, Keys.DetailsText)
+							.AddRichtext(string.Empty, CairoFont.WhiteDetailText(), detailsPaneBounds.ForkChild(), Keys.DetailsText)
 						.EndClip()
 						.AddVerticalScrollbarEx((float value) =>
 						{
@@ -465,21 +469,27 @@ namespace Instruments.GUI
 
 			if (refreshDetails)
 			{
-				FileTree.Node content = _contentSelection;
-				if (content == null)
-				{
-					DetailsText.SetNewText(Array.Empty<RichTextComponentBase>());
-					return;
-				}
-				else
-				{
-					RichTextComponentBase[] components = BuildDetails(content);
-					DetailsText.SetNewText(components);
-				}
-
+				RefreshDetails();
 				SetPreviewTrack(null);
-				UpdateScrollBarSize(DetailsText, DetailsScrollBar);
 			}
+		}
+		//
+		// Summary:
+		//     Refreshes only rich text details without applying any additional logic.
+		protected void RefreshDetails()
+		{
+			FileTree.Node content = _contentSelection;
+			if (content == null)
+			{
+				DetailsText.SetNewText(Array.Empty<RichTextComponentBase>());
+				return;
+			}
+			else
+			{
+				RichTextComponentBase[] components = BuildDetails(content);
+				DetailsText.SetNewText(components);
+			}
+			UpdateScrollBarSize(DetailsText, DetailsScrollBar);
 		}
 		//
 		// Summary:
@@ -551,6 +561,34 @@ namespace Instruments.GUI
 
 				components.Add(new RichTextComponent(capi, left, leftFont));
 			}
+			void addPlaybackComponent(MidiFile midi, int trackIndex)
+			{
+				// Is it playing?
+				bool isPreviewing = trackIndex == _activeTrack;
+
+				if (isPreviewing)
+				{
+					components.Add(new LinkTextComponent(capi, "Stop", leftFont, (txc) =>
+					{
+						capi.Gui.PlaySound("menubutton_press");
+						SetPreviewTrack(null);
+					}));
+				}
+				else
+				{
+					components.Add(new LinkTextComponent(capi, "Preview", leftFont, (txc) =>
+					{
+						capi.Gui.PlaySound("menubutton_press");
+						SetPreviewTrack(midi, trackIndex);
+					}));
+				}
+
+				components.Add(new LinkTextComponent(capi, "Play", rightFont, (txc) =>
+				{
+					// Play callback
+				}));
+				components.Add(new RichTextComponent(capi, Environment.NewLine, leftFont));
+			}
 
 			addComponent("Name:", node.Name);
 			addComponent("Path:", node.DirectoryPath);
@@ -612,11 +650,7 @@ namespace Instruments.GUI
 					addComponent($"Track #{ti:00}:", $"{getDuration(midi.ReadTrackDuration(trackIndex))}:0.00");
 					addComponent($"Instrument:", $"{instrument}");
 					addComponent($"Events:", $"{track.MidiEvents.Count}");
-
-					components.Add(new LinkTextComponent(capi, "Preview\n", leftFont, (txc) =>
-					{
-						SetPreviewTrack(midi, trackIndex);
-					}));
+					addPlaybackComponent(midi, trackIndex);
 				}
 			}
 			catch
@@ -638,6 +672,9 @@ namespace Instruments.GUI
 			{
 				if (_previewMusicPlayer != null && _previewMusicPlayer.IsPlaying)
 					_previewMusicPlayer.Stop();
+
+				_activeTrack = -1;
+				RefreshDetails();
 			}
 
 			if (midi == null)
@@ -650,11 +687,14 @@ namespace Instruments.GUI
 			{
 				safeStop();
 				_previewMusicPlayer.Play(midi, track);
+				_activeTrack = track;
 			}
 			catch
 			{
 				safeStop();
 			}
+
+			RefreshDetails();
 		}
 
 		public void UpdateBand(string bandName)
