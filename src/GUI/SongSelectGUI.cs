@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Vintagestory.API.Common;
 using Vintagestory.API.Client;
 using Vintagestory.GameContent;
-using Midi;
 using MidiParser;
 using Instruments.Files;
 using Instruments.Types;
