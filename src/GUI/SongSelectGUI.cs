@@ -699,7 +699,8 @@ namespace Instruments.GUI
 				if (seekToStart)
 				{
 					double start = midi.ReadFirstNoteInSeconds(track);
-					_previewMusicPlayer.Seek(start);
+					if (start>0)
+						_previewMusicPlayer.Seek(start);
 				}
 
 				_activeTrack = track;
@@ -743,11 +744,9 @@ namespace Instruments.GUI
 				if (_previewMusicPlayer.IsPlaying)
 				{
 					_previewMusicPlayer.Update(deltaTime);
-				}
-
-				if (_previewMusicPlayer.IsFinished)
-				{
-					SetPreviewTrack(null);
+					
+					if (_previewMusicPlayer.IsFinished)
+						SetPreviewTrack(null);
 				}
 			}
 
