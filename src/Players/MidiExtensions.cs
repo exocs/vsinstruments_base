@@ -65,6 +65,25 @@ namespace Instruments.Players
 		}
 		//
 		// Summary:
+		//     Finds the instrument meta events in the provided track.
+		public static bool FindInstrument(this MidiTrack track, out Midi.Instrument instrument)
+		{
+			foreach (MidiEvent midiEvent in track.MidiEvents)
+			{
+				if (midiEvent.Time > 0)
+					break;
+
+				if (midiEvent.MidiEventType == MidiEventType.ProgramChange)
+				{
+					instrument = (Midi.Instrument)midiEvent.Arg2;
+					return true;
+				}
+			}
+			instrument = default;
+			return false;
+		}
+		//
+		// Summary:
 		//     Returns the duration of the specified track in seconds.
 		public static double ReadTrackDuration(this MidiFile midi, int track)
 		{

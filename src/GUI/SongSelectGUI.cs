@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Vintagestory.API.Common;
 using Vintagestory.API.Client;
 using Vintagestory.GameContent;
+using Midi;
+using MidiParser;
 using Instruments.Files;
+using Instruments.Types;
 using Instruments.Players;
 
 namespace Instruments.GUI
@@ -53,6 +57,10 @@ namespace Instruments.GUI
 		private object _hasChangedLock = new object();
 		//
 		// Summary:
+		//     The music player responsible for playing local preview.
+		private MusicPlayerMidi _previewMusicPlayer;
+		//
+		// Summary:
 		//     Convenience wrapper for all text constants of individual Gui elements for this menu.
 		private struct Keys
 		{
@@ -67,6 +75,7 @@ namespace Instruments.GUI
 			public const string SearchTextInput = "searchTextInput";
 
 			public const string DetailsText = "detailsText";
+			public const string DetailsScrollBar = "detailsScrollBar";
 		}
 
 		private GuiElementFlatList TreeList
@@ -121,6 +130,14 @@ namespace Instruments.GUI
 				return SingleComposer.GetRichtext(Keys.DetailsText);
 			}
 		}
+
+		private GuiElementScrollbar DetailsScrollBar
+		{
+			get
+			{
+				return SingleComposer.GetScrollbar(Keys.DetailsScrollBar);
+			}
+		}
 		//
 		// Summary:
 		//     Create new song selection GUI with root path at the provided directory path.
@@ -140,6 +157,13 @@ namespace Instruments.GUI
 
 			_treeNodes = new List<FileTree.Node>();
 			_contentNodes = new List<FileTree.Node>();
+
+			// TODO@exocs: Pass the default instrument in the dialog,
+			// or determine it based on what e.g. player holds or
+			// make sure the player allows instrument type changes.
+			List<InstrumentType> someTypes = new List<InstrumentType>();
+			InstrumentType.Find("grandpiano", someTypes);
+			_previewMusicPlayer = new MusicPlayerMidi(capi, someTypes.Count > 0 ? someTypes[0] : null);
 
 			bandNameChange = bandChange;
 			SetupDialog(title, bandName);
@@ -226,6 +250,14 @@ namespace Instruments.GUI
 				paneHeight
 			);
 
+			// Details scrollbar
+			ElementBounds detailsScrollbarBounds = ElementBounds.Fixed(
+				detailsPaneBounds.fixedX + detailsPaneBounds.fixedWidth + padding,
+				detailsPaneBounds.fixedY,
+				20,
+				detailsPaneBounds.fixedHeight
+			);
+
 			// Background
 			ElementBounds bgBounds = ElementBounds.Fill.WithFixedPadding(padding);
 			bgBounds.BothSizing = ElementSizing.FitToChildren;
@@ -233,7 +265,7 @@ namespace Instruments.GUI
 				addressBarBounds, searchBarBounds,
 				treePaneBounds, treeScrollbarBounds,
 				contentPaneBounds, contentScrollbarBounds,
-				detailsPaneBounds
+				detailsPaneBounds, detailsScrollbarBounds
 			);
 
 			// Begin composing
@@ -268,7 +300,13 @@ namespace Instruments.GUI
 
 						}, contentScrollbarBounds, contentPaneBounds, Keys.ContentScrollBar)
 
-						.AddRichtext(string.Empty, CairoFont.WhiteDetailText(), detailsPaneBounds, Keys.DetailsText)
+						.BeginClip(detailsPaneBounds.ForkBoundingParent())
+							.AddRichtext(string.Empty, CairoFont.WhiteDetailText(), detailsPaneBounds, Keys.DetailsText)
+						.EndClip()
+						.AddVerticalScrollbarEx((float value) =>
+						{
+							OnScrollBarValueChanged(value, DetailsText);
+						}, detailsScrollbarBounds, detailsPaneBounds, Keys.DetailsScrollBar)
 
 					.EndChildElements()
 					.Compose();
@@ -290,6 +328,14 @@ namespace Instruments.GUI
 		}
 		//
 		// Summary:
+		//     Callback raised when the scroll bar value for provided list has changed.
+		private void OnScrollBarValueChanged(float value, GuiElementRichtext list)
+		{
+			list.Bounds.fixedY = -value;
+			list.Bounds.CalcWorldBounds();
+		}
+		//
+		// Summary:
 		//     Updates the scroll bar dimensions based on content in the provided list.
 		private void UpdateScrollBarSize(GuiElementFlatList list, GuiElementScrollbar scrollBar)
 		{
@@ -300,6 +346,14 @@ namespace Instruments.GUI
 			double scrollVisibleHeight = list.Bounds.fixedHeight;
 
 			scrollBar.SetHeights((float)scrollVisibleHeight, (float)scrollTotalHeight);
+		}
+		//
+		// Summary:
+		//     Updates the scroll bar dimensions based on content in the provided richtext.
+		private void UpdateScrollBarSize(GuiElementRichtext richText, GuiElementScrollbar scrollBar)
+		{
+			double totalHeight = richText.Bounds.fixedHeight;
+			scrollBar.SetHeights((float)richText.Bounds.ParentBounds.InnerHeight, (float)totalHeight);
 		}
 		//
 		// Summary:
@@ -414,14 +468,17 @@ namespace Instruments.GUI
 				FileTree.Node content = _contentSelection;
 				if (content == null)
 				{
-					DetailsText.SetNewText(Array.Empty<RichTextComponent>());
+					DetailsText.SetNewText(Array.Empty<RichTextComponentBase>());
 					return;
 				}
 				else
 				{
-					RichTextComponent[] components = BuildDetails(content);
+					RichTextComponentBase[] components = BuildDetails(content);
 					DetailsText.SetNewText(components);
 				}
+
+				SetPreviewTrack(null);
+				UpdateScrollBarSize(DetailsText, DetailsScrollBar);
 			}
 		}
 		//
@@ -457,19 +514,22 @@ namespace Instruments.GUI
 		private void FilterContent(string textFilter)
 		{
 			_textFilter = textFilter;
-			RefreshContent(false, true);
+			RefreshContent(false, true, true);
 		}
 		//
 		// Summary:
 		//     Builds details string for the provided node.
-		private RichTextComponent[] BuildDetails(FileTree.Node node)
+		private RichTextComponentBase[] BuildDetails(FileTree.Node node)
 		{
-			List<RichTextComponent> components = new List<RichTextComponent>();
+			//TODO@exocs: Clean this mess up.
+			List<RichTextComponentBase> components = new List<RichTextComponentBase>();
 			CairoFont leftFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Left);
 			CairoFont rightFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Right);
-			void addComponent(string left, string right, int rightMaxLen = 33)
+
+			void addComponent(string left, string right, bool addNewLine = true, int rightMaxLen = 33)
 			{
-				components.Add(new RichTextComponent(capi, left + ":", leftFont));
+				//var newcomponents = VtmlUtil.Richtextify(capi, left, leftFont);
+				components.Add(new RichTextComponent(capi, left, leftFont));
 
 				// Clamp the length to sensible values
 				if (right.Length > rightMaxLen)
@@ -478,22 +538,30 @@ namespace Instruments.GUI
 					right = string.Concat(right, "...");
 				}
 
-				components.Add(new RichTextComponent(capi, right + Environment.NewLine, rightFont));
+				// Ensure new line if necessary
+				if (addNewLine && !right.EndsWith(Environment.NewLine))
+					right = right + Environment.NewLine;
+
+				components.Add(new RichTextComponent(capi, right, rightFont));
 			}
 			void addSingleComponent(string left)
 			{
-				components.Add(new RichTextComponent(capi, left + ":\n", leftFont));
+				if (!left.EndsWith(Environment.NewLine))
+					left = left + Environment.NewLine;
+
+				components.Add(new RichTextComponent(capi, left, leftFont));
 			}
 
-			addComponent("Name", node.Name);
-			addComponent("Path", node.DirectoryPath);
+			addComponent("Name:", node.Name);
+			addComponent("Path:", node.DirectoryPath);
 
 			FileInfo fileInfo = new FileInfo(node.FullPath);
 			if (fileInfo != null)
 			{
-				addComponent("Size", $"{fileInfo.Length / 1000.0f:0.00} kB");
-				addComponent("Created", $"{fileInfo.CreationTime}");
-				addComponent("Extension", $"{fileInfo.Extension}");
+
+				addComponent("Size:", $"{fileInfo.Length / 1000.0f:0.00} kB");
+				addComponent("Created:", $"{fileInfo.CreationTime}");
+				addComponent("Extension:", $"{fileInfo.Extension}");
 			}
 
 			string midiFormat(int v)
@@ -514,9 +582,11 @@ namespace Instruments.GUI
 
 			try
 			{
-				MidiParser.MidiFile parser = new MidiParser.MidiFile(fileInfo.FullName);
-				addComponent("Format", midiFormat(parser.Format));
-				addComponent("Tracks", $"{parser.TracksCount}");
+				MidiFile midi = new MidiFile(fileInfo.FullName);
+				addComponent("Format:", midiFormat(midi.Format));
+				addComponent("BPM:", $"{midi.ReadBPM()}");
+				addComponent("Duration:", getDuration(midi.ReadMaxTrackDuration()));
+				addComponent("Tracks:", $"{midi.TracksCount}");
 
 				string getDuration(double seconds)
 				{
@@ -529,20 +599,25 @@ namespace Instruments.GUI
 				}
 
 				// Add data about individual tracks
-				for (int ti = 0; ti < parser.TracksCount; ++ti)
+				for (int ti = 0; ti < midi.TracksCount; ++ti)
 				{
-					//components.Add(new RichTextComponent(capi, $"  {ti:00:}                   {getDuration(parser.ReadTrackDuration(ti))}", leftFont));
-					//components.Add(new RichTextComponent(capi, $"{parser.Tracks[ti].MidiEvents.Count} events\n", rightFont));
+					int trackIndex = ti;
+					MidiTrack track = midi.Tracks[trackIndex];
 
-					components.Add(new RichTextComponent(capi, $"    Track {ti:00} - {parser.Tracks[ti].MidiEvents.Count:0000} events", leftFont));
-					components.Add(new RichTextComponent(capi, $"{getDuration(parser.ReadTrackDuration(ti))}\n", rightFont));
-					//addComponent($"    Track {ti}",
-					//	$"{getDuration(parser.ReadTrackDuration(ti))}, {parser.Tracks[ti].MidiEvents.Count} events");
-					//addComponent($"    Track {ti} [{parser.Tracks[ti].MidiEvents.Count}]",
-					//	$"{getDuration(parser.ReadTrackDuration(ti))}");
+					string instrument = "Unknown";
+					if (track.FindInstrument(out Instrument midiInstrument))
+						instrument = midiInstrument.Name();
+
+					addSingleComponent(string.Empty);
+					addComponent($"Track #{ti:00}:", $"{getDuration(midi.ReadTrackDuration(trackIndex))}:0.00");
+					addComponent($"Instrument:", $"{instrument}");
+					addComponent($"Events:", $"{track.MidiEvents.Count}");
+
+					components.Add(new LinkTextComponent(capi, "Preview\n", leftFont, (txc) =>
+					{
+						SetPreviewTrack(midi, trackIndex);
+					}));
 				}
-				addComponent("BPM", $"{parser.ReadBPM()}");
-				addComponent("Duration", getDuration(parser.ReadMaxTrackDuration()));
 			}
 			catch
 			{
@@ -550,6 +625,36 @@ namespace Instruments.GUI
 			}
 
 			return components.ToArray();
+		}
+		//
+		// Summary:
+		//     Sets the preview track to play.
+		// Parameters:
+		//   midi: The file to play or null to stop previewing.
+		//   track: Index of the track within the file.
+		private void SetPreviewTrack(MidiFile midi, int track = 0)
+		{
+			void safeStop()
+			{
+				if (_previewMusicPlayer != null && _previewMusicPlayer.IsPlaying)
+					_previewMusicPlayer.Stop();
+			}
+
+			if (midi == null)
+			{
+				safeStop();
+				return;
+			}
+
+			try
+			{
+				safeStop();
+				_previewMusicPlayer.Play(midi, track);
+			}
+			catch
+			{
+				safeStop();
+			}
 		}
 
 		public void UpdateBand(string bandName)
@@ -575,6 +680,14 @@ namespace Instruments.GUI
 				{
 					_hasChanged = false;
 					RefreshContent(true, true);
+				}
+			}
+
+			if (_previewMusicPlayer != null)
+			{
+				if (_previewMusicPlayer.IsPlaying)
+				{
+					_previewMusicPlayer.Update(deltaTime);
 				}
 			}
 
