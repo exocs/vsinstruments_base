@@ -532,37 +532,62 @@ namespace Instruments.GUI
 		private RichTextComponentBase[] BuildDetails(FileTree.Node node)
 		{
 			//TODO@exocs: Clean this mess up.
-			List<RichTextComponentBase> components = new List<RichTextComponentBase>();
+
+			// Define the fonts with their orientation either used on the left (title) or the right (content)
+			// in the rich text widget.
 			CairoFont leftFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Left);
 			CairoFont rightFont = CairoFont.WhiteDetailText().WithOrientation(EnumTextOrientation.Right);
 
-			const int rightTextMaxLen = 33;
+			// Maximum length of characters of the content (right side).
+			const int maximumContentLength = 33;
 
-			void addComponent(string left, string right, bool addNewLine = true, int rightMaxLen = rightTextMaxLen)
+			// Trims content above the length and replaces the last symbols by '...'
+			string trimContent(string content, int maxLength = maximumContentLength)
+			{
+				if (content.Length > maxLength)
+				{
+					content = content.Substring(0, maxLength - 3);
+					return string.Concat(content, "...");
+				}
+				return content;
+			}
+
+
+			List<RichTextComponentBase> components = new List<RichTextComponentBase>();
+
+			// Add new entry, title is the title on the left, content is the item on the right.
+			void addComponent(string title, string content)
 			{
 				//var newcomponents = VtmlUtil.Richtextify(capi, left, leftFont);
-				components.Add(new RichTextComponent(capi, left, leftFont));
+				components.Add(new RichTextComponent(capi, title, leftFont));
 
 				// Clamp the length to sensible values
-				if (right.Length > rightMaxLen)
+				if (content.Length > maximumContentLength)
 				{
-					right = right.Substring(0, rightMaxLen - 3);
-					right = string.Concat(right, "...");
+					content = content.Substring(0, maximumContentLength - 3);
+					content = string.Concat(content, "...");
 				}
 
-				// Ensure new line if necessary
-				if (addNewLine && !right.EndsWith(Environment.NewLine))
-					right = right + Environment.NewLine;
+				// Ensure the line is terminated properly
+				if (!content.EndsWith(Environment.NewLine))
+				{
+					content += Environment.NewLine;
+				}
 
-				components.Add(new RichTextComponent(capi, right, rightFont));
+				components.Add(new RichTextComponent(capi, content, rightFont));
 			}
-			void addSingleComponent(string left)
+			// Add new entry, no content, just a title on the left. 
+			void addSingleComponent(string title)
 			{
-				if (!left.EndsWith(Environment.NewLine))
-					left = left + Environment.NewLine;
+				if (!title.EndsWith(Environment.NewLine))
+				{
+					title += Environment.NewLine;
+				}
 
-				components.Add(new RichTextComponent(capi, left, leftFont));
+				components.Add(new RichTextComponent(capi, title, leftFont));
 			}
+			// Add playback component for the provided file at specified track,
+			// this crates the 'Preview' and 'Play' buttons.
 			void addPlaybackComponent(MidiFile midi, int trackIndex)
 			{
 				// Is it playing?
@@ -591,26 +616,17 @@ namespace Instruments.GUI
 				}));
 				components.Add(new RichTextComponent(capi, Environment.NewLine, leftFont));
 			}
-			void addPathComponent(string left, string filePath, int rightMaxLen = rightTextMaxLen)
+			// Add new entry for file paths that are clickable (to be opened in explorer)
+			void addPathComponent(string title, string path)
 			{
-				//var newcomponents = VtmlUtil.Richtextify(capi, left, leftFont);
-				components.Add(new RichTextComponent(capi, left, leftFont));
-
-				// Clamp the length to sensible values
-				string rightText = filePath;
-				if (rightText.Length > rightMaxLen)
-				{
-					rightText = rightText.Substring(0, rightMaxLen - 3);
-					rightText = string.Concat(rightText, "...");
-				}
-
-				// Is it playing?
-				components.Add(new LinkTextComponent(capi, rightText, rightFont, (txc) =>
+				components.Add(new RichTextComponent(capi, title, leftFont));
+				string displayText = trimContent(path);
+				components.Add(new LinkTextComponent(capi, displayText, rightFont, (txc) =>
 				{
 					capi.Gui.PlaySound("menubutton_press");
 					System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo()
 					{
-						FileName = filePath,
+						FileName = path,
 						UseShellExecute = true,
 						Verb = "open"
 					});
@@ -619,6 +635,7 @@ namespace Instruments.GUI
 				components.Add(new RichTextComponent(capi, Environment.NewLine, leftFont));
 			}
 
+			// Start populating the list with individual components to display:
 			addComponent("Name:", node.Name);
 			addPathComponent("Path:", node.DirectoryPath);
 
@@ -630,17 +647,19 @@ namespace Instruments.GUI
 				addComponent("Extension:", $"{fileInfo.Extension}");
 			}
 
-			string getMidiFormat(int v)
+			// Return a user understandable string representation of a midi format value.
+			string getMidiFormat(int formatValue, string defaultValue = "Unknown")
 			{
-				switch (v)
+				switch (formatValue)
 				{
 					case 0: return "Single track";
 					case 1: return "Multi track";
 					case 2: return "Multi song";
-					default: return "Unknown";
+					default: return defaultValue;
 				}
 			}
 
+			// Only add additional midi information if the midi file can actually be parsed.
 			try
 			{
 				// TODO@exocs:
@@ -649,10 +668,10 @@ namespace Instruments.GUI
 				MidiFile midi = new MidiFile(fileInfo.FullName);
 				addComponent("Format:", getMidiFormat(midi.Format));
 				addComponent("BPM:", $"{midi.ReadBPM()}");
-				addComponent("Duration:", getDuration(midi.ReadMaxTrackDuration()));
+				addComponent("Duration:", durationToString(midi.ReadMaxTrackDuration()));
 				addComponent("Tracks:", $"{midi.TracksCount}");
 
-				string getDuration(double seconds)
+				string durationToString(double seconds)
 				{
 					// Round the duration to hh:mm:ss, the miliseconds are just chore for the eyes.
 					TimeSpan duration = TimeSpan.FromSeconds(seconds);
@@ -669,25 +688,29 @@ namespace Instruments.GUI
 					int trackIndex = ti;
 					MidiTrack track = midi.Tracks[trackIndex];
 
-					string instrument = "Unknown";
-					if (track.FindInstrument(out Instrument midiInstrument))
-						instrument = midiInstrument.Name();
-
+					// Extra spacing for readability
 					addSingleComponent(string.Empty);
+
+					// Start information about this track,
 					addSingleComponent($"Track #{ti:00}:");
-					addComponent("Duration:", $"{getDuration(midi.ReadTrackDuration(trackIndex))}");
+					addComponent("Duration:", $"{durationToString(midi.ReadTrackDuration(trackIndex))}");
 
-
+					// but only add information about notes if
+					// there are any relevant ones.
 					int notes = midi.ReadNoteCount(trackIndex);
 					addComponent($"Notes:", $"{notes}");
 					if (notes > 0)
 					{
-						addComponent($"First Note:", $"{getDuration(midi.ReadFirstNoteInSeconds(trackIndex))}");
-						addComponent("Instrument:", $"{instrument}");
+						addComponent($"First Note:", $"{durationToString(midi.ReadFirstNoteInSeconds(trackIndex))}");
+						addComponent("Instrument:", $"{track.FindInstrumentName()}");
 					}
 
+					// Likewise only show the playback component if
+					// there are notes to be played.
 					if (notes > 0)
+					{
 						addPlaybackComponent(midi, trackIndex);
+					}
 				}
 			}
 			catch
@@ -727,7 +750,7 @@ namespace Instruments.GUI
 				if (seekToStart)
 				{
 					double start = midi.ReadFirstNoteInSeconds(track);
-					if (start>0)
+					if (start > 0)
 						_previewMusicPlayer.Seek(start);
 				}
 
@@ -767,12 +790,15 @@ namespace Instruments.GUI
 				}
 			}
 
+			// Update the playback of the preview player, if there is any.
+			// This is also responsible for finishing the playback and
+			//  resetting its playback state, if applicable.
 			if (_previewMusicPlayer != null)
 			{
 				if (_previewMusicPlayer.IsPlaying)
 				{
 					_previewMusicPlayer.Update(deltaTime);
-					
+
 					if (_previewMusicPlayer.IsFinished)
 						SetPreviewTrack(null);
 				}

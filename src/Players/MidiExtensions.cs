@@ -1,4 +1,5 @@
-﻿using MidiParser;
+﻿using Midi;
+using MidiParser;
 
 namespace Instruments.Players
 {
@@ -97,8 +98,8 @@ namespace Instruments.Players
 		}
 		//
 		// Summary:
-		//     Finds the instrument meta events in the provided track.
-		public static bool FindInstrument(this MidiTrack track, out Midi.Instrument instrument)
+		//     Try to find the instrument in existing meta events in the provided track.
+		public static bool FindInstrument(this MidiTrack track, out Instrument instrument)
 		{
 			foreach (MidiEvent midiEvent in track.MidiEvents)
 			{
@@ -113,6 +114,16 @@ namespace Instruments.Players
 			}
 			instrument = default;
 			return false;
+		}
+		//
+		// Summary:
+		//     Try to find the instrument in existing meta events in the provided track.
+		//     Returns specified default value if no program change meta events are found.
+		public static string FindInstrumentName(this MidiTrack track, string defaultValue = "Unknown")
+		{
+			return FindInstrument(track, out Instrument instrument) ?
+				instrument.Name() :
+				defaultValue;
 		}
 		//
 		// Summary:
