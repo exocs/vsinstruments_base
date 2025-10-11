@@ -602,37 +602,36 @@ namespace Instruments.GUI
 				addComponent("Extension:", $"{fileInfo.Extension}");
 			}
 
-			string midiFormat(int v)
+			string getMidiFormat(int v)
 			{
 				switch (v)
 				{
-					case 0:
-						return "Single track";
-					case 1:
-						return "Multi track";
-					case 2:
-						return "Multi song";
-
-					default:
-						return "Unknown";
+					case 0: return "Single track";
+					case 1: return "Multi track";
+					case 2: return "Multi song";
+					default: return "Unknown";
 				}
 			}
 
 			try
 			{
+				// TODO@exocs:
+				//  Preferable collect all of this data after parsing and then cache it per node,
+				//  in the 'user' field. No need to re-parse the file unless the file has changed!
 				MidiFile midi = new MidiFile(fileInfo.FullName);
-				addComponent("Format:", midiFormat(midi.Format));
+				addComponent("Format:", getMidiFormat(midi.Format));
 				addComponent("BPM:", $"{midi.ReadBPM()}");
 				addComponent("Duration:", getDuration(midi.ReadMaxTrackDuration()));
 				addComponent("Tracks:", $"{midi.TracksCount}");
 
 				string getDuration(double seconds)
 				{
+					// Round the duration to hh:mm:ss, the miliseconds are just chore for the eyes.
 					TimeSpan duration = TimeSpan.FromSeconds(seconds);
 					return string.Format(
-						"{0:00}:{1:00}:{2:00}",
+						"{0:00}:{1:00}:{2:00}",//:{3:000}",
 						duration.Hours, duration.Minutes,
-						duration.Seconds, MathF.Round(duration.Milliseconds)
+						duration.Seconds//, MathF.Round(duration.Milliseconds)
 						);
 				}
 
@@ -647,10 +646,20 @@ namespace Instruments.GUI
 						instrument = midiInstrument.Name();
 
 					addSingleComponent(string.Empty);
-					addComponent($"Track #{ti:00}:", $"{getDuration(midi.ReadTrackDuration(trackIndex))}:0.00");
-					addComponent($"Instrument:", $"{instrument}");
-					addComponent($"Events:", $"{track.MidiEvents.Count}");
-					addPlaybackComponent(midi, trackIndex);
+					addSingleComponent($"Track #{ti:00}:");
+					addComponent("Duration:", $"{getDuration(midi.ReadTrackDuration(trackIndex))}");
+
+
+					int notes = midi.ReadNoteCount(trackIndex);
+					addComponent($"Notes:", $"{notes}");
+					if (notes > 0)
+					{
+						addComponent($"First Note:", $"{getDuration(midi.ReadFirstNoteInSeconds(trackIndex))}");
+						addComponent("Instrument:", $"{instrument}");
+					}
+
+					if (notes > 0)
+						addPlaybackComponent(midi, trackIndex);
 				}
 			}
 			catch
@@ -666,7 +675,7 @@ namespace Instruments.GUI
 		// Parameters:
 		//   midi: The file to play or null to stop previewing.
 		//   track: Index of the track within the file.
-		private void SetPreviewTrack(MidiFile midi, int track = 0)
+		private void SetPreviewTrack(MidiFile midi, int track = 0, bool seekToStart = true)
 		{
 			void safeStop()
 			{
@@ -687,6 +696,12 @@ namespace Instruments.GUI
 			{
 				safeStop();
 				_previewMusicPlayer.Play(midi, track);
+				if (seekToStart)
+				{
+					double start = midi.ReadFirstNoteInSeconds(track);
+					_previewMusicPlayer.Seek(start);
+				}
+
 				_activeTrack = track;
 			}
 			catch
@@ -728,6 +743,11 @@ namespace Instruments.GUI
 				if (_previewMusicPlayer.IsPlaying)
 				{
 					_previewMusicPlayer.Update(deltaTime);
+				}
+
+				if (_previewMusicPlayer.IsFinished)
+				{
+					SetPreviewTrack(null);
 				}
 			}
 

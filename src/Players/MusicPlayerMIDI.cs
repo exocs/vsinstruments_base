@@ -195,10 +195,43 @@ namespace Instruments.Players
 				// TODO@exocs: Add Seek() that can skip polling events
 			}
 		}
+		//
+		// Summary:
+		//     Seeks to the position within the player without playing notes.
+		//
+		// Parameters:
+		//   time: Time in seconds to seek to.
+		public void Seek(double time)
+		{
+			if (!IsPlaying)
+			{
+				throw new InvalidOperationException("Player is not playing!");
+			}
+
+			long timeInTicks = TimeToTicks(time);
+			long durationInTicks = GetDuration(_midiTrack);
+			if (timeInTicks > durationInTicks)
+			{
+				throw new ArgumentOutOfRangeException("Player cannot seek beyond its end!");
+			}
+
+			// Find the nearest event
+			for (int i = 0; i < _midiTrack.MidiEvents.Count; ++i)
+			{
+				if (_midiTrack.MidiEvents[i].Time >= timeInTicks)
+				{
+					_eventIndex = i;
+					break;
+				}
+			}
+
+
+			_elapsedTime = TicksToTime(timeInTicks);
+		}
 
 		public void Stop()
 		{
-			if (!IsPlaying)
+			if (!IsPlaying && !IsFinished)
 			{
 				throw new InvalidOperationException("Cannot stop MIDI playback, the player is not playing!");
 			}

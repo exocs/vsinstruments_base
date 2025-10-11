@@ -65,6 +65,38 @@ namespace Instruments.Players
 		}
 		//
 		// Summary:
+		//     Returns the time in ticks at which the first event occurs or -1 if none.
+		public static int ReadFirstNoteInTicks(MidiTrack track)
+		{
+			int count = track.MidiEvents.Count;
+			if (count > 0)
+			{
+				for (int e = 0; e < count; ++e)
+				{
+					if (track.MidiEvents[e].MidiEventType == MidiEventType.NoteOn)
+						return track.MidiEvents[e].Time;
+				}
+			}
+			return -1;
+		}
+		//
+		// Summary:
+		//     Returns the number of notes in the provided track.
+		public static int ReadNoteCount(MidiTrack track)
+		{
+			if (track.MidiEvents.Count == 0)
+				return 0;
+
+			int count = 0;
+			for (int i = 0; i < track.MidiEvents.Count; ++i)
+			{
+				if (track.MidiEvents[i].MidiEventType == MidiEventType.NoteOn)
+					++count;
+			}
+			return count;
+		}
+		//
+		// Summary:
 		//     Finds the instrument meta events in the provided track.
 		public static bool FindInstrument(this MidiTrack track, out Midi.Instrument instrument)
 		{
@@ -95,6 +127,26 @@ namespace Instruments.Players
 			int bpm = midi.ReadBPM();
 			double durationSeconds = TicksToTime(ticksDuration, bpm, midi.TicksPerQuarterNote);
 			return durationSeconds;
+		}
+		//
+		// Summary:
+		//     Returns the time in seconds at which the first event occurs or -1 if none.
+		public static double ReadFirstNoteInSeconds(this MidiFile midi, int track)
+		{
+			int firstNoteInTicks = ReadFirstNoteInTicks(midi.Tracks[track]);
+			if (firstNoteInTicks == -1)
+				return -1;
+
+			int bpm = midi.ReadBPM();
+			double startInSeconds = TicksToTime(firstNoteInTicks, bpm, midi.TicksPerQuarterNote);
+			return startInSeconds;
+		}
+		//
+		// Summary:
+		//     Returns the number of notes in the specified track.
+		public static int ReadNoteCount(this MidiFile midi, int track)
+		{
+			return ReadNoteCount(midi.Tracks[track]);
 		}
 		//
 		// Summary:
