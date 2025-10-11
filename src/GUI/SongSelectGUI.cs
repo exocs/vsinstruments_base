@@ -51,6 +51,10 @@ namespace Instruments.GUI
 		private bool _hasChanged;
 		//
 		// Summary:
+		//     The node that has changed.
+		private FileTree.Node _changedNode;
+		//
+		// Summary:
 		//     Object used for locking this context when accessed from other threads.
 		private object _hasChangedLock = new object();
 		//
@@ -154,6 +158,7 @@ namespace Instruments.GUI
 				lock (_hasChangedLock)
 				{
 					_hasChanged = true;
+					_changedNode = node;
 				}
 			};
 
@@ -529,7 +534,21 @@ namespace Instruments.GUI
 		//     Builds details string for the provided node.
 		private RichTextComponentBase[] BuildDetails(FileTree.Node node)
 		{
-			//TODO@exocs: Clean this mess up.
+			// If an info is provided, use the existing one. The tree watcher
+			// notifies us of changes done and the file info is always refreshed.
+			// If it doesn't exist yet, new one can safely be created and stored
+			// in the node, as done here:
+			MidiFileInfo midiInfo;
+			if (node.Context is MidiFileInfo existingMidiFileInfo)
+			{
+				midiInfo = existingMidiFileInfo;
+			}
+			else
+			{
+				MidiFileInfo newFileInfo = new MidiFileInfo(node.FullPath);
+				node.Context = newFileInfo;
+				midiInfo = newFileInfo;
+			}
 
 			// Define the fonts with their orientation either used on the left (title) or the right (content)
 			// in the rich text widget.
@@ -548,6 +567,17 @@ namespace Instruments.GUI
 					return string.Concat(content, "...");
 				}
 				return content;
+			}
+			// Returns consistently formatted string for provided duration.
+			string durationToString(double seconds)
+			{
+				// Round the duration to hh:mm:ss, the miliseconds are just chore for the eyes.
+				TimeSpan duration = TimeSpan.FromSeconds(seconds);
+				return string.Format(
+					"{0:00}:{1:00}:{2:00}",//:{3:000}",
+					duration.Hours, duration.Minutes,
+					duration.Seconds//, MathF.Round(duration.Milliseconds)
+					);
 			}
 
 
@@ -634,86 +664,42 @@ namespace Instruments.GUI
 			}
 
 			// Start populating the list with individual components to display:
-			addComponent("Name:", node.Name);
-			addPathComponent("Path:", node.DirectoryPath);
+			addComponent(			"Name:",		node.Name);
+			addPathComponent(		"Path:",		node.DirectoryPath);
+			addComponent(			"Size:",		$"{midiInfo.SizeKB:0.00} kB");
+			addComponent(			"Created:",		$"{midiInfo.FileInfo.CreationTime}");
+			addComponent(			"Extension:",	$"{midiInfo.FileInfo.Extension}");
 
-			FileInfo fileInfo = new FileInfo(node.FullPath);
-			if (fileInfo != null)
+			// When the file is not a valid MIDI file, there is nothing more to populate:
+			if (!midiInfo.IsMidi)
 			{
-				addComponent("Size:", $"{fileInfo.Length / 1000.0f:0.00} kB");
-				addComponent("Created:", $"{fileInfo.CreationTime}");
-				addComponent("Extension:", $"{fileInfo.Extension}");
+				return components.ToArray();
 			}
 
-			// Return a user understandable string representation of a midi format value.
-			string getMidiFormat(int formatValue, string defaultValue = "Unknown")
+			addComponent(			"Format:",		$"{midiInfo.FormatText}");
+			addComponent(			"BPM:",			$"{midiInfo.BPM}");
+			addComponent(			"Duration:",	$"{durationToString(midiInfo.Duration)}");
+			addComponent(			"Tracks:",		$"{midiInfo.TracksCount}");
+
+			// Now that the global properties are added populated, start adding individual
+			// information for each track available in the file.
+			for (int i = 0; i < midiInfo.TracksCount; ++i)
 			{
-				switch (formatValue)
-				{
-					case 0: return "Single track";
-					case 1: return "Multi track";
-					case 2: return "Multi song";
-					default: return defaultValue;
-				}
-			}
+				MidiTrackInfo trackInfo = midiInfo.Tracks[i];
+				// Add single line spacing between each track, it makes it much easier
+				// to comprehend visually.
+				addSingleComponent(	string.Empty);
+				addSingleComponent(	$"Track #{trackInfo.Index:00}:");
+				addComponent(		"Duration:",	$"{durationToString(trackInfo.Duration)}");
+				addComponent(		"Notes:",		$"{trackInfo.NoteCount}");
+				
+				// There is nothing more to add if the track has no notes.
+				if (trackInfo.NoteCount == 0)
+					continue;
 
-			// Only add additional midi information if the midi file can actually be parsed.
-			try
-			{
-				// TODO@exocs:
-				//  Preferable collect all of this data after parsing and then cache it per node,
-				//  in the 'user' field. No need to re-parse the file unless the file has changed!
-				MidiFile midi = new MidiFile(fileInfo.FullName);
-				addComponent("Format:", getMidiFormat(midi.Format));
-				addComponent("BPM:", $"{midi.ReadBPM()}");
-				addComponent("Duration:", durationToString(midi.ReadMaxTrackDuration()));
-				addComponent("Tracks:", $"{midi.TracksCount}");
-
-				string durationToString(double seconds)
-				{
-					// Round the duration to hh:mm:ss, the miliseconds are just chore for the eyes.
-					TimeSpan duration = TimeSpan.FromSeconds(seconds);
-					return string.Format(
-						"{0:00}:{1:00}:{2:00}",//:{3:000}",
-						duration.Hours, duration.Minutes,
-						duration.Seconds//, MathF.Round(duration.Milliseconds)
-						);
-				}
-
-				// Add data about individual tracks
-				for (int ti = 0; ti < midi.TracksCount; ++ti)
-				{
-					int trackIndex = ti;
-					MidiTrack track = midi.Tracks[trackIndex];
-
-					// Extra spacing for readability
-					addSingleComponent(string.Empty);
-
-					// Start information about this track,
-					addSingleComponent($"Track #{ti:00}:");
-					addComponent("Duration:", $"{durationToString(midi.ReadTrackDuration(trackIndex))}");
-
-					// but only add information about notes if
-					// there are any relevant ones.
-					int notes = midi.ReadNoteCount(trackIndex);
-					addComponent($"Notes:", $"{notes}");
-					if (notes > 0)
-					{
-						addComponent($"First Note:", $"{durationToString(midi.ReadFirstNoteInSeconds(trackIndex))}");
-						addComponent("Instrument:", $"{track.FindInstrumentName()}");
-					}
-
-					// Likewise only show the playback component if
-					// there are notes to be played.
-					if (notes > 0)
-					{
-						addPlaybackComponent(midi, trackIndex);
-					}
-				}
-			}
-			catch
-			{
-				addComponent("Format", "Unknown/Unsupported");
+				addComponent(		$"First Note:", $"{durationToString(trackInfo.FirstNoteTime.Value)}");
+				addComponent(		"Instrument:",	$"{trackInfo.InstrumentText}");
+				addPlaybackComponent(midiInfo.GetMidiFile(), trackInfo.Index);
 			}
 
 			return components.ToArray();
@@ -779,12 +765,24 @@ namespace Instruments.GUI
 		public override void OnBeforeRenderFrame3D(float deltaTime)
 		{
 			// Poll for changes from the file tree and update the content if necessary.
+			// Additionally refresh the midi file info for this node, if it exists.
 			lock (_hasChangedLock)
 			{
 				if (_hasChanged)
 				{
 					_hasChanged = false;
-					RefreshContent(true, true);
+					FileTree.Node changedNode = _changedNode;
+
+					if (changedNode != null && changedNode.Context is MidiFileInfo)
+					{
+						// Make sure to overwrite the previous file info, as the viewer
+						// will never re-create it on demand. It will only reuse the existing
+						// or create a brand new info for nodes that don't have any yet.
+						changedNode.Context = new MidiFileInfo(changedNode.FullPath);
+					}
+
+					_changedNode = null;
+					RefreshContent(true, true, true);
 				}
 			}
 

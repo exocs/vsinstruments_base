@@ -1,8 +1,175 @@
-﻿using Midi;
+﻿using System.IO;
+using Midi;
 using MidiParser;
 
 namespace Instruments.Players
 {
+	//
+	// Summary:
+	//     Class that stores and describes a single track within a MIDI file.
+	public class MidiTrackInfo
+	{
+		//
+		// Summary:
+		//     The index of this track.
+		public readonly int Index;
+		//
+		// Summary:
+		//     The length of this track in seconds.
+		public readonly double Duration;
+		//
+		// Summary:
+		//     Number of notes in the track.
+		public readonly int NoteCount;
+		//
+		// Summary:
+		//     Time in seconds at which the first note exists.
+		//     May be null if no notes are present.
+		public readonly double? FirstNoteTime;
+		//
+		// Summary:
+		//     Instrument defined by a program change in this track.
+		//     May be null if no such events are present.
+		public readonly Instrument? Instrument;
+		//
+		// Summary:
+		//     Returns the MIDI instrument in human readable format.
+		public string InstrumentText
+		{
+			get
+			{
+				if (!Instrument.HasValue)
+					return "Unknown";
+
+				return Instrument.Value.Name();
+			}
+		}
+		//
+		// Summary:
+		//     Creates new midi track info for the provided track.
+		public MidiTrackInfo(MidiFile midi, int track)
+		{
+			Index = track;
+			Duration = midi.ReadTrackDuration(track);
+			NoteCount = midi.ReadNoteCount(track);
+			FirstNoteTime = (NoteCount > 0) ? midi.ReadFirstNoteInSeconds(track) : null;
+			Instrument = midi.FindInstrument(track);
+		}
+	}
+	//
+	// Summary:
+	//     Class that stores and describes a single MIDI file.
+	public class MidiFileInfo
+	{
+		//
+		// Summary:
+		//     Stores the generic information about this file.
+		public readonly FileInfo FileInfo;
+		//
+		// Summary:
+		//     Returns whether this file exists.
+		public bool Exists => FileInfo.Exists;
+		//
+		// Summary:
+		//     Actual and parsed MIDI file, if successfull.
+		private readonly MidiFile MidiFile;
+		//
+		// Summary:
+		//     Returns whether this object is a valid MIDI (file) info.
+		public bool IsMidi => MidiFile != null;
+		//
+		// Summary:
+		//     Returns the size of this file in KB.
+		public long SizeKB
+		{
+			get
+			{
+				return (long)(FileInfo.Length / 1000.0f);
+			}
+		}
+		//
+		// Summary:
+		//     Returns the BPM of the MIDI.
+		public readonly int BPM;
+		//
+		// Summary:
+		//     Returns the duration of the longest channel in the MIDI.
+		public readonly double Duration;
+		//
+		// Summary:
+		//     Stores information about individual tracks in this file.
+		public readonly MidiTrackInfo[] Tracks;
+		//
+		// Summary:
+		//     Returns the number of tracks in this file.
+		public int TracksCount
+		{
+			get
+			{
+				return Tracks.Length;
+			}
+		}
+		//
+		// Summary:
+		//     Returns the MIDI format in human readable format.
+		public string FormatText
+		{
+			get
+			{
+				int formatValue = IsMidi ? MidiFile.Format : -1;
+				switch (formatValue)
+				{
+					case 0: return "Single track";
+					case 1: return "Multi track";
+					case 2: return "Multi song";
+					default: return "Unknown";
+				}
+			}
+		}
+		//
+		// Summary:
+		//     Creates new MIDI file info from the provided absolute path.
+		public MidiFileInfo(string path)
+		{
+			// The file must exist to even be considered a valid MIDI.
+			this.FileInfo = new FileInfo(path);
+			if (!FileInfo.Exists)
+			{
+				return;
+			}
+
+			// If the file cannot be parsed, anything else is no longer
+			// relevant in this context.
+			try
+			{
+				this.MidiFile = new MidiFile(path);
+			}
+			catch
+			{
+				return;
+			}
+
+			// Start by retrieving information about the midi itself:
+			BPM = MidiFile.ReadBPM();
+			Duration = MidiFile.ReadMaxTrackDuration();
+			Tracks = new MidiTrackInfo[MidiFile.TracksCount];
+			for (int i = 0; i < MidiFile.TracksCount; ++i)
+			{
+				Tracks[i] = new MidiTrackInfo(MidiFile, i);
+			}
+		}
+		//
+		// Summary:
+		//     Returns the actual MIDI file.
+		public MidiFile GetMidiFile()
+		{
+			// Even though this property could be made public, explicit method call is
+			// used instead to prevent accessing the file properties instead of the actual
+			// cached properties by accident.
+			return MidiFile;
+		}
+	}
+
 	//
 	// Summary:
 	//     Convenience class for MIDI file and player extensions.
@@ -151,6 +318,15 @@ namespace Instruments.Players
 			int bpm = midi.ReadBPM();
 			double startInSeconds = TicksToTime(firstNoteInTicks, bpm, midi.TicksPerQuarterNote);
 			return startInSeconds;
+		}
+		//
+		// Summary:
+		//     Returns the time in seconds at which the first event occurs or -1 if none.
+		public static Instrument? FindInstrument(this MidiFile midi, int track)
+		{
+			return midi.Tracks[track].FindInstrument(out Instrument instrument) ?
+				instrument :
+				null;
 		}
 		//
 		// Summary:
