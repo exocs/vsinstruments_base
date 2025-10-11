@@ -6,7 +6,6 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Midi;
 using Instruments.GUI;
-using Instruments.GUI;
 using Instruments.Network.Packets;
 using Instruments.Types;
 
@@ -346,7 +345,7 @@ namespace Instruments.Items
 			{
 				Action<string> sb = SetBand;
 				//SongSelectGUI songGui = new SongSelectGUI(capi, PlaySong, Definitions.Instance.GetSongList(), sb, Definitions.Instance.GetBandName());
-				SongSelectGUI songGUI = new SongSelectGUI(capi, Core.InstrumentModSettings.Instance.LocalMidiDirectory);
+				SongSelectGUI songGUI = new SongSelectGUI(capi, Core.InstrumentModSettings.Instance.LocalMidiDirectory, InstrumentType);
 				songGUI.TryOpen();
 			}
 		}

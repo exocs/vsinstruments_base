@@ -147,7 +147,7 @@ namespace Instruments.GUI
 		//
 		// Summary:
 		//     Create new song selection GUI with root path at the provided directory path.
-		public SongSelectGUI(ICoreClientAPI capi, string directory, Action<string> bandChange = null, string bandName = "", string title = "Song Selection")
+		public SongSelectGUI(ICoreClientAPI capi, string directory, InstrumentType instrumentType, Action<string> bandChange = null, string bandName = "", string title = "Song Selection")
 			: base(capi)
 		{
 			_fileTree = new FileTree(directory);
@@ -164,13 +164,7 @@ namespace Instruments.GUI
 
 			_treeNodes = new List<FileTree.Node>();
 			_contentNodes = new List<FileTree.Node>();
-
-			// TODO@exocs: Pass the default instrument in the dialog,
-			// or determine it based on what e.g. player holds or
-			// make sure the player allows instrument type changes.
-			List<InstrumentType> someTypes = new List<InstrumentType>();
-			InstrumentType.Find("grandpiano", someTypes);
-			_previewMusicPlayer = new MusicPlayerMidi(capi, someTypes.Count > 0 ? someTypes[0] : null);
+			_previewMusicPlayer = new MusicPlayerMidi(capi, instrumentType); // If no instrument is provided, try to use anything.
 
 			bandNameChange = bandChange;
 			SetupDialog(title, bandName);
