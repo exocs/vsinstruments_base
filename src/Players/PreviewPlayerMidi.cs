@@ -1,9 +1,9 @@
 ﻿using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.MathTools;
 using Midi;
 using Instruments.Types;
-using Vintagestory.API.MathTools;
 
 namespace Instruments.Players
 {
@@ -28,7 +28,7 @@ namespace Instruments.Players
 		//
 		// Summary:
 		//     Starts playing a note.
-		protected override void OnNoteOn(Pitch pitch, int channel, float time)
+		protected override void OnNoteOn(Pitch pitch, float velocity, int channel, float time)
 		{
 			if (CoreAPI is not ICoreClientAPI clientAPI)
 			{
@@ -39,7 +39,7 @@ namespace Instruments.Players
 
 			InstrumentType.GetPitchSound(pitch, out string assetPath, out float modPitch);
 			SoundParams soundParams = new SoundParams(new AssetLocation("instruments", assetPath));
-			soundParams.Volume = 1.0f;
+			soundParams.Volume = Constants.Playback.GetVolumeFromVelocity(velocity);
 			soundParams.DisposeOnFinish = true;
 			soundParams.RelativePosition = playerEntity == null;
 			soundParams.Position = playerEntity != null ? clientAPI.World.Player.Entity.Pos.XYZFloat : Vec3f.Zero;
@@ -49,7 +49,11 @@ namespace Instruments.Players
 			if (sound != null)
 			{
 				int index = (int)pitch;
-				TryRemoveSound(index);
+
+				// If, by any chance, the events are mismatched or something else has happened
+				// and there is a sound already playing in the slot, simply stop it and replace
+				// it immediately with the new sound.
+				TryRemoveSound(index, Constants.Playback.MinFadeOutDuration);
 
 				_activeSounds[index] = sound;
 				sound.Start();
@@ -58,20 +62,21 @@ namespace Instruments.Players
 		//
 		// Summary:
 		//     Stops playing a note.
-		protected override void OnNoteOff(Pitch pitch, int channel, float time)
+		protected override void OnNoteOff(Pitch pitch, float velocity, int channel, float time)
 		{
 			if (CoreAPI is not ICoreClientAPI)
 				return;
 
 			int index = (int)pitch;
-			TryRemoveSound(index);
+			float fadeDuration = Constants.Playback.GetFadeDurationFromVelocity(velocity);
+			TryRemoveSound(index, fadeDuration);
 		}
 		//
 		// Summary:
 		//     Removes a sound from the active sounds.
 		// Parameters:
 		//   fadeDuration: Duration to fade out the sound in (in seconds) or 0 for immediate.
-		private void TryRemoveSound(int index, float fadeDuration = 1.0f)
+		private void TryRemoveSound(int index, float fadeDuration)
 		{
 			ILoadedSound sound = _activeSounds[index];
 			if (sound == null)
@@ -95,7 +100,7 @@ namespace Instruments.Players
 		//     Callback raised when the playback stops.
 		protected override void OnStop()
 		{
-			StopAllSounds(0.20f);
+			StopAllSounds(Constants.Playback.MinFadeOutDuration);
 			base.OnStop();
 		}
 		//

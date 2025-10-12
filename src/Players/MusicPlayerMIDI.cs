@@ -198,11 +198,11 @@ namespace Instruments.Players
 				switch (midiEvent.MidiEventType)
 				{
 					case MidiEventType.NoteOff:
-						OnNoteOff((Pitch)midiEvent.Note, channel, time);
+						OnNoteOff((Pitch)midiEvent.Note, Constants.Midi.NormalizeVelocity((byte)midiEvent.Velocity),  channel, time);
 						break;
 
 					case MidiEventType.NoteOn:
-						OnNoteOn((Pitch)midiEvent.Note, channel, time);
+						OnNoteOn((Pitch)midiEvent.Note, Constants.Midi.NormalizeVelocity((byte)midiEvent.Velocity), channel, time);
 						break;
 
 					case MidiEventType.KeyAfterTouch:
@@ -283,17 +283,19 @@ namespace Instruments.Players
 		//     Callback raised when a MIDI NoteOn event occurs.
 		// Parameters:
 		//   pitch: The key pitch to be played.
+		//   velocity: The rate at which the key was pressed. (0-1)
 		//   channel: The source channel index.
 		//   time: The time in seconds this event occured at.
-		protected abstract void OnNoteOn(Pitch pitch, int channel, float time);
+		protected abstract void OnNoteOn(Pitch pitch, float velocity, int channel, float time);
 		//
 		// Summary:
 		//     Callback raised when a MIDI NoteOff event occurs.
 		// Parameters:
 		//   pitch: The key pitch to be stopped.
+		//   velocity: The rate at which the key was released. (0-1)
 		//   channel: The source channel index.
 		//   time: The time in seconds this event occured at.
-		protected abstract void OnNoteOff(Pitch pitch, int channel, float time);
+		protected abstract void OnNoteOff(Pitch pitch, float velocity, int channel, float time);
 		//
 		// Summary:
 		//     Callback raised when the playback stops.

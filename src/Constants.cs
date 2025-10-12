@@ -66,5 +66,70 @@ namespace Instruments
 			//     Attribute of this type will contain the current mode the tool is set to.
 			public const string ToolMode = "toolMode";
 		}
+		//
+		// Summary:
+		//     This structure contains constants related to item and block attributes.
+		public struct Midi
+		{
+			//
+			// Summary:
+			//     Minimum value of the MIDI velocity event.
+			public const byte VelocityMin = 0;
+			//
+			// Summary:
+			//     Maximum value of the MIDI velocity event.
+			public const byte VelocityMax = 127;
+			//
+			// Summary:
+			//     Converts the provided velocity value into a normalized 0-1 value.
+			public static float NormalizeVelocity(byte velocity)
+			{
+				// Clamp the value within bounds, there is no reason to go beyond the bounds in this case.
+				if (velocity < VelocityMin) velocity = VelocityMin;
+				else if (velocity > VelocityMax) velocity = VelocityMax;
+
+				return velocity / (float)VelocityMax;
+			}
+		}
+		//
+		// Summary:
+		//     This structure contains constants related to music players and their playback.
+		public struct Playback
+		{
+			//
+			// Summary:
+			//     Default fade out time for all notes, if not specified differently.
+			//     This is an arbitrary value provided by the mod, the abrupt cutoff of the sound does not
+			//     sound good nor is it very physically accurate. Adjust per liking.
+			public const float FadeOutDuration = 1.00f;
+			//
+			// Summary:
+			//     Minimum fade out time for all notes, if not specified differently.
+			public const float MinFadeOutDuration = 0.25f;
+			//
+			// Summary:
+			//     Default minimum voluem for all notes, if not specified differently.
+			//     This is an arbitrary value provided by the mod, used to determine the volume at minimum velocity.
+			public const float MinVelocityVolume = 0.25f;
+			//
+			// Summary:
+			//     Default minimum voluem for all notes, if not specified differently.
+			//     This is an arbitrary value provided by the mod, used to determine the volume at minimum velocity.
+			public const float MaxVelocityVolume = 1.0f;
+			//
+			// Summary:
+			//     Returns the desired volume based on provided velocity.
+			public static float GetVolumeFromVelocity(float velocity01)
+			{
+				return Single.Lerp(MinVelocityVolume, MaxVelocityVolume, velocity01);
+			}
+			//
+			// Summary:
+			//     Returns the desired fadeout duration based on provided velocity.
+			public static float GetFadeDurationFromVelocity(float velocity01)
+			{
+				return Single.Lerp(FadeOutDuration, MinFadeOutDuration, velocity01);
+			}
+		}
 	}
 }
