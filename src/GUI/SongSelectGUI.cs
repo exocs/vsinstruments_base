@@ -164,7 +164,7 @@ namespace Instruments.GUI
 
 			_treeNodes = new List<FileTree.Node>();
 			_contentNodes = new List<FileTree.Node>();
-			_previewMusicPlayer = new MusicPlayerMidi(capi, instrumentType); // If no instrument is provided, try to use anything.
+			_previewMusicPlayer = new PreviewPlayerMidi(capi, instrumentType); // If no instrument is provided, try to use anything.
 
 			bandNameChange = bandChange;
 			SetupDialog(title, bandName);
@@ -179,6 +179,13 @@ namespace Instruments.GUI
 				_fileTree.Dispose();
 				_fileTree = null;
 			}
+
+			if (_previewMusicPlayer != null)
+			{
+				if (_previewMusicPlayer.IsPlaying || _previewMusicPlayer.IsFinished)
+					_previewMusicPlayer.Stop();
+			}
+
 			base.OnGuiClosed();
 		}
 		//

@@ -1,5 +1,4 @@
 ﻿using System;
-using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Midi;
 using MidiParser;
@@ -9,11 +8,17 @@ namespace Instruments.Players
 {
 	//
 	// Summary:
-	//     Allows opening and playing back a MIDI file.
-	public class MusicPlayerMidi
+	//     Base class for players that allow processing and playing back parsed MIDI files.
+	public abstract class MusicPlayerMidi : IDisposable
 	{
-		private ICoreAPI _coreAPI;
-		private InstrumentType _instrumentType;
+		//
+		// Summary:
+		//     The core interface to the game.
+		protected ICoreAPI CoreAPI { get; private set; }
+		//
+		// Summary:
+		//     The instrument type associated with this player.
+		protected InstrumentType InstrumentType { get; private set; }
 
 		private MidiTrack _midiTrack;
 
@@ -21,7 +26,13 @@ namespace Instruments.Players
 		private int _ticksPerQuarterNote;
 		private int _ticksDuration;
 
+		//
+		// Summary:
+		//     Elapsed time since start in seconds.
 		private double _elapsedTime;
+		//
+		// Summary:
+		//     Duration of active track in seconds.
 		private double _duration;
 
 		private int _eventIndex;
@@ -182,17 +193,31 @@ namespace Instruments.Players
 			// Try polling for possible events to play
 			while (tryPollEvent(out MidiEvent midiEvent))
 			{
-
-				if (midiEvent.MidiEventType == MidiEventType.NoteOn)
+				int channel = (int)_channel;
+				float time = (float)TicksToTime(midiEvent.Time);
+				switch (midiEvent.MidiEventType)
 				{
-					Pitch pitch = (Pitch)midiEvent.Note;
-					int channel = (int)_channel;
-					float time = (float)TicksToTime(midiEvent.Time);
-					PlayNote(pitch, channel, time);
-				}
+					case MidiEventType.NoteOff:
+						OnNoteOff((Pitch)midiEvent.Note, channel, time);
+						break;
 
-				// TODO@exocs: Process other events
-				// TODO@exocs: Add Seek() that can skip polling events
+					case MidiEventType.NoteOn:
+						OnNoteOn((Pitch)midiEvent.Note, channel, time);
+						break;
+
+					case MidiEventType.KeyAfterTouch:
+						break;
+					case MidiEventType.ControlChange:
+						break;
+					case MidiEventType.ProgramChange:
+						break;
+					case MidiEventType.ChannelAfterTouch:
+						break;
+					case MidiEventType.PitchBendChange:
+						break;
+					case MidiEventType.MetaEvent:
+						break;
+				}
 			}
 		}
 		//
@@ -228,7 +253,10 @@ namespace Instruments.Players
 
 			_elapsedTime = TicksToTime(timeInTicks);
 		}
-
+		//
+		// Summary:
+		//     Stops the playback.
+		//     The player must be playing or finished in order for it to be able to stop!
 		public void Stop()
 		{
 			if (!IsPlaying && !IsFinished)
@@ -247,41 +275,43 @@ namespace Instruments.Players
 
 			_eventIndex = 0;
 			_channel = 0;
-		}
 
-		protected virtual void PlayNote(Pitch pitch, int channel, float time)
-		{
-			PlaySound(pitch, channel, time);
+			OnStop();
 		}
-
+		//
+		// Summary:
+		//     Callback raised when a MIDI NoteOn event occurs.
+		// Parameters:
+		//   pitch: The key pitch to be played.
+		//   channel: The source channel index.
+		//   time: The time in seconds this event occured at.
+		protected abstract void OnNoteOn(Pitch pitch, int channel, float time);
+		//
+		// Summary:
+		//     Callback raised when a MIDI NoteOff event occurs.
+		// Parameters:
+		//   pitch: The key pitch to be stopped.
+		//   channel: The source channel index.
+		//   time: The time in seconds this event occured at.
+		protected abstract void OnNoteOff(Pitch pitch, int channel, float time);
+		//
+		// Summary:
+		//     Callback raised when the playback stops.
+		protected virtual void OnStop() { }
+		//
+		// Summary:
+		//     Creates new MIDI player.
+		// Parameters:
+		//   api: The API interface to the game world.
+		//   instrumentType: The instrument type this player should use.
 		public MusicPlayerMidi(ICoreAPI api, InstrumentType instrumentType)
 		{
-			_coreAPI = api;
-			_instrumentType = instrumentType;
+			CoreAPI = api;
+			InstrumentType = instrumentType;
 		}
-
-		protected void PlaySound(Pitch pitch, int channel, float time)
-		{
-			// Does it actually have the wrong tuning after all?
-
-			_instrumentType.GetPitchSound(pitch, out string assetPath, out float modPitch);
-
-			if (_coreAPI is ICoreClientAPI clientAPI)
-			{
-				SoundParams soundParams = new SoundParams(new AssetLocation("instruments", assetPath));
-				soundParams.Volume = 1.0f;
-				soundParams.DisposeOnFinish = true;
-				soundParams.RelativePosition = false;
-				soundParams.Position = clientAPI.World.Player.Entity.Pos.XYZFloat;
-				soundParams.Pitch = modPitch;
-				ILoadedSound sound = clientAPI.World.LoadSound(soundParams);
-				if (sound != null)
-				{
-					sound.Start();
-					sound.FadeOutAndStop(1.0f/*+note.Length.Seconds*/);
-				}
-			}
-		}
-
+		//
+		// Summary:
+		//     Dispose of this player and all of its allocated resources and sounds.
+		public abstract void Dispose();
 	}
 }
