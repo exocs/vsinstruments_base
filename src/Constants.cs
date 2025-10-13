@@ -131,5 +131,16 @@ namespace Instruments
 				return Single.Lerp(FadeOutDuration, MinFadeOutDuration, velocity01);
 			}
 		}
+		//
+		// Summary:
+		//     This structure contains constants related to files and file operations.
+		public struct Files
+		{
+			//
+			// Summary:
+			//     This value defines the (maximum) size of chunks transferred files will be
+			//     fragmented into prior to being sent over the network.
+			public const int MaximumSegmentSizeInBytes = 1024;
+		}
 	}
 }
