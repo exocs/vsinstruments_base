@@ -45,10 +45,15 @@ namespace Instruments.Types
 		private static Dictionary<int, InstrumentType> _instrumentTypes;
 		//
 		// Summary:
+		//     Queue of types that are pending initialization.
+		private static Queue<InstrumentType> _initializationQueue;
+		//
+		// Summary:
 		//     Intializes static type properties.
 		static InstrumentType()
 		{
 			_instrumentTypes = new Dictionary<int, InstrumentType>();
+			_initializationQueue = new Queue<InstrumentType>();
 		}
 		//
 		// Summary:
@@ -73,9 +78,21 @@ namespace Instruments.Types
 
 			instrumentType._api = api;
 			instrumentType._id = id;
-			instrumentType._name = instrumentType.Name;
-			instrumentType._animation = instrumentType.Animation;
-			instrumentType.Initialize(api);
+
+			// Insert the newly registered type into the queue for pending initialization,
+			// the initialization will need to happen only after assets are loaded.
+			_initializationQueue.Enqueue(instrumentType);
+		}
+		//
+		// Summary:
+		//     Initialize all types that are pending initialization.
+		public static void InitializeTypes()
+		{
+			while (_initializationQueue.Count > 0)
+			{
+				InstrumentType type = _initializationQueue.Dequeue();
+				type.Initialize();
+			}
 		}
 		//
 		// Summary:
@@ -86,15 +103,17 @@ namespace Instruments.Types
 			for (int i = 0; i < allTypes.Length; ++i)
 			{
 				InstrumentType type = allTypes[i];
-				if (_instrumentTypes.Remove(type._id))
+				if (type != null && _instrumentTypes.Remove(type._id))
 					type.Cleanup();
 			}
 			_instrumentTypes.Clear();
 		}
 		//
 		// Summary:
-		//     Initialize this type.
-		protected virtual void Initialize(ICoreAPI api)
+		//     Initialize the instrument type instance.
+		//     This occurs only after the item type and its associated instrument type are both registered.
+		//     Additionally initialization will only happen after assets are loaded.
+		protected virtual void Initialize()
 		{
 			_toolModes = new SkillItem[4];
 			_toolModes[(int)PlayMode.abc] = new SkillItem() { Code = new AssetLocation(PlayMode.abc.ToString()), Name = Lang.Get("ABC Mode") };
@@ -102,7 +121,7 @@ namespace Instruments.Types
 			_toolModes[(int)PlayMode.lockedSemiTone] = new SkillItem() { Code = new AssetLocation(PlayMode.lockedSemiTone.ToString()), Name = Lang.Get("Locked Play: Semi Tone") };
 			_toolModes[(int)PlayMode.lockedTone] = new SkillItem() { Code = new AssetLocation(PlayMode.lockedTone.ToString()), Name = Lang.Get("Locked Play: Tone") };
 
-			if (api is ICoreClientAPI capi)
+			if (Api is ICoreClientAPI capi)
 			{
 				_toolModes[(int)PlayMode.abc].WithIcon(capi, capi.Gui.LoadSvgWithPadding(new AssetLocation("instruments", "textures/icons/abc.svg"), 48, 48, 5, ColorUtil.WhiteArgb));
 				_toolModes[(int)PlayMode.abc].TexturePremultipliedAlpha = false;

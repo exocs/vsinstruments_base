@@ -3,6 +3,7 @@ using Vintagestory.API.Common;
 
 using Instruments.Blocks;
 using Instruments.Items;
+using Instruments.Types;
 
 namespace Instruments.Core
 {
@@ -20,8 +21,12 @@ namespace Instruments.Core
             // TODO@exocs: Add InstrumentType support
             api.RegisterBlockClass("musicblock", typeof(MusicBlock));
             api.RegisterBlockEntityClass("musicblockentity", typeof(BEMusicBlock));
-
-            
         }
+
+		public override void AssetsLoaded(ICoreAPI api)
+		{
+			base.AssetsLoaded(api);
+			InstrumentType.InitializeTypes();
+		}
 	}
 }
