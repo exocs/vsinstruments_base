@@ -803,6 +803,9 @@ namespace Instruments.Files
 			// especially before starting the recursive traversal/find.
 			path = Path.TrimEndingDirectorySeparator(path);
 
+			// Replace all separators with the proper format.
+			path = path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+
 			// Determine if path is full or relative; if the path is fully qualified and doesn't align
 			// with this filemanager's root path, the find can automatically fail.
 			if (Path.IsPathFullyQualified(path))
