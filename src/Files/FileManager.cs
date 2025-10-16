@@ -20,10 +20,6 @@ namespace Instruments.Files
 	{
 		//	 
 		// Summary:	 
-		//     Returns the interface to the game.
-		protected ICoreAPI Api { get; }
-		//	 
-		// Summary:	 
 		//     Returns the file tree this class operates in.
 		public FileTree Tree { get; private set; }
 		//
@@ -37,17 +33,17 @@ namespace Instruments.Files
 			// such cases, but don't account for them initially as these are unlikely.
 			using (MemoryStream destination = new MemoryStream((int)source.Length))
 			{
+				// Run the source through the compression first and make sure the compression stream is closed,
+				// to ensure it has been closed and disposed of properly before manipulating it further.
 				using (DeflateStream compress = new DeflateStream(destination, CompressionMode.Compress, leaveOpen: true))
 				{
-					// Run the source through the compression stream before resizing the output to the actual
-					// size, dropping our initial conservative reserve and return to the start of the stream.
 					source.CopyTo(compress);
-					compress.Flush();
-
-					// Resize the output to the actual compressed size, compacting the buffer.
-					destination.SetLength(destination.Position);
-					destination.Seek(0, SeekOrigin.Begin);
 				}
+
+				// Now that the compression is done, resize the output to the actual compressed size,
+				// compating the resulting buffer in the process.
+				destination.SetLength(destination.Position);
+				destination.Seek(0, SeekOrigin.Begin);
 				return destination.ToArray();
 			}
 		}
@@ -62,10 +58,8 @@ namespace Instruments.Files
 				// Run the source through the compression stream before resizing the output to the actual
 				// size, dropping our initial conservative reserve and return to the start of the stream.
 				decompressionStream.CopyTo(destination);
-				decompressionStream.Flush();
 			}
 		}
-
 		//
 		// Summary:
 		//     Compresses the provided stream into a byte stream via the provided compression method.
@@ -109,7 +103,6 @@ namespace Instruments.Files
 		//   root: Root directory this manager will operate in.
 		protected FileManager(ICoreAPI api, string root)
 		{
-			Api = api;
 			Tree = new FileTree(root);
 		}
 	}
