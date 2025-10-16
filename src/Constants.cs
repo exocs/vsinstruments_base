@@ -55,6 +55,11 @@ namespace Instruments
 			public const string Note = "noteTest";
 
 			public const string Abc = "abc";
+
+			//
+			// Summary:
+			//     Defines the name of the networking channel used by file manager for transfering files.
+			public const string FileManager = "FileTransferChannel";
 		}
 		//
 		// Summary:

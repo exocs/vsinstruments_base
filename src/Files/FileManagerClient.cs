@@ -1,4 +1,6 @@
-﻿using Vintagestory.API.Client;
+﻿using System.IO;
+using Vintagestory.API.Client;
+using Instruments.Network.Packets;
 
 namespace Instruments.Files
 {
@@ -10,7 +12,11 @@ namespace Instruments.Files
 		//	 
 		// Summary:	 
 		//     Returns the interface to the game.
-		protected new ICoreClientAPI Api { get; }
+		protected ICoreClientAPI ClientAPI { get; }
+		//	 
+		// Summary:	 
+		//     Returns the networking channel for file transactions.
+		protected IClientNetworkChannel ClientChannel { get; private set; }
 		//
 		// Summary:
 		//     Creates new file manager.
@@ -20,7 +26,35 @@ namespace Instruments.Files
 		public FileManagerClient(ICoreClientAPI api, string root) :
 			base(api, root)
 		{
-			Api = api;
+			ClientAPI = api;
+			ClientChannel = api.Network.RegisterChannel(Constants.Channel.FileManager)
+				.RegisterMessageType<FileTransferPacket>()
+				.SetMessageHandler<FileTransferPacket>(OnTransferFilePacket);
+		}
+		//
+		// Summary:
+		//     Callback raised when the file manager receives a file.
+		protected virtual void OnTransferFilePacket(FileTransferPacket packet)
+		{
+			ClientAPI.ShowChatMessage(
+				$"Received file: {packet.Name}\n" +
+				$"  Original size: {packet.Size}b\n" +
+				$"  Compressed size: {packet.Data.Length}b\n"
+				);
+
+			using (MemoryStream decompressedFile = new MemoryStream())
+			{
+				Decompress(packet.Data, decompressedFile, packet.Compression);
+				try
+				{
+					decompressedFile.Seek(0, SeekOrigin.Begin);
+					MidiParser.MidiFile midi = new MidiParser.MidiFile(decompressedFile);
+				}
+				catch
+				{
+
+				}
+			}
 		}
 	}
 }
