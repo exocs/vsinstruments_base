@@ -6,6 +6,7 @@ using Vintagestory.API.Common;
 using Instruments.Blocks;
 using Instruments.Network.Packets;
 using Instruments.Types;
+using Instruments.Files;
 
 namespace Instruments.Core
 {
@@ -30,7 +31,19 @@ namespace Instruments.Core
 
 
         long listenerIDClient = -1;
-        public override void StartClientSide(ICoreClientAPI api)
+
+
+		private FileManagerClient _fileManager;
+		public override FileManager FileManager
+		{
+			get
+			{
+				return _fileManager;
+
+			}
+		}
+
+		public override void StartClientSide(ICoreClientAPI api)
         {
             clientApi = api;
             //base.StartClientSide(api);
@@ -61,7 +74,10 @@ namespace Instruments.Core
             MusicBlockManager.Instance.Reset(); // I think there's a manager for both Server and Client, so reset it I guess
             Definitions.Instance.Reset();
 
-            clientApi.RegisterCommand("instruments", "instrument playback commands", "[enable|disable]", ParseClientCommand);
+            _fileManager = new FileManagerClient(api, InstrumentModSettings.Instance.ClientMidiDirectory);
+
+
+			clientApi.RegisterCommand("instruments", "instrument playback commands", "[enable|disable]", ParseClientCommand);
             clientSideEnable = true;
             clientSideReady = true;
 

@@ -2,17 +2,19 @@
 using Vintagestory.API.Common;
 
 using Instruments.Blocks;
-using Instruments.Items;
 using Instruments.Types;
+using Instruments.Files;
 
 namespace Instruments.Core
 {
-    public class InstrumentModCommon : ModSystem
+    public abstract class InstrumentModCommon : ModSystem
     {
         protected bool otherPlayerSync = true;
         protected bool serversideAnimSync = false;
 
-        public override void Start(ICoreAPI api)
+        public abstract FileManager FileManager { get; }
+
+		public override void Start(ICoreAPI api)
         {
             base.Start(api);
 

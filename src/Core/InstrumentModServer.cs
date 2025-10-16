@@ -2,9 +2,9 @@
 using System.IO; // Open files
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
-
 using Instruments.Network.Packets;
 using Instruments.Blocks;
+using Instruments.Files;
 
 namespace Instruments.Core
 {
@@ -30,7 +30,16 @@ namespace Instruments.Core
             public int index;
         }
 
-        public override void StartServerSide(ICoreServerAPI api)
+		private FileManagerServer _fileManager;
+		public override FileManager FileManager
+		{
+			get
+			{
+				return _fileManager;
+			}
+		}
+
+		public override void StartServerSide(ICoreServerAPI api)
         {
             serverAPI = api;
             base.StartServerSide(api);
@@ -60,7 +69,8 @@ namespace Instruments.Core
             MusicBlockManager.Instance.Reset();
             ABCParsers.Instance.SetAPI(serverAPI);
 
-            
+            _fileManager = new FileManagerServer(api, InstrumentModSettings.Instance.ServerMidiDirectory);
+
             serverAPI.Event.PlayerJoin += SendSongs;
         }
         public override void Dispose()

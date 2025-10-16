@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.CompilerServices;
 using Vintagestory.API.Client;
 using Vintagestory.GameContent;
 using MidiParser;
+using Instruments.Core;
 using Instruments.Files;
-using Instruments.Types;
 using Instruments.Players;
+using Instruments.Types;
 
 namespace Instruments.GUI
 {
@@ -147,10 +147,11 @@ namespace Instruments.GUI
 		//
 		// Summary:
 		//     Create new song selection GUI with root path at the provided directory path.
-		public SongSelectGUI(ICoreClientAPI capi, string directory, InstrumentType instrumentType, Action<string> bandChange = null, string bandName = "", string title = "Song Selection")
+		public SongSelectGUI(ICoreClientAPI capi, InstrumentType instrumentType, Action<string> bandChange = null, string bandName = "", string title = "Song Selection")
 			: base(capi)
 		{
-			_fileTree = new FileTree(directory);
+			// Retrieve the client file tree from the mod system.
+			_fileTree = capi.ModLoader.GetModSystem<InstrumentModClient>().FileManager.Tree;
 
 			// TODO@exocs: Solve more pragmatically, for now this is good enough.
 			_fileTree.NodeChanged += (node) =>
@@ -168,18 +169,62 @@ namespace Instruments.GUI
 
 			bandNameChange = bandChange;
 			SetupDialog(title, bandName);
+			SetupSelection();
+		}
+		//
+		// Summary:
+		//     Determine and reset selection to previous state, if possible.
+		private void SetupSelection()
+		{
+			// First determine whether the tree may already have some nodes selected. If yes, try to use
+			// the latest available node of each type (directory for tree, file for content) as default.
+			List<FileTree.Node> activeSelection = new List<FileTree.Node>();
+			_fileTree.GetNodes(activeSelection, FileTree.Filter.SelectedOnly | FileTree.Filter.Directories | FileTree.Filter.Files);
+
+			// There is some selection, so try to restore it:
+			if (activeSelection.Count > 0)
+			{
+				FileTree.Node selectContentNode = null;
+				FileTree.Node selectTreeNode = null;
+				foreach (FileTree.Node node in activeSelection)
+				{
+					if (!node.IsValid)
+						continue;
+
+					if (node.IsDirectory)
+					{
+						selectTreeNode = node;
+						continue;
+					}
+
+					selectContentNode = node;
+				}
+
+				// TODO@exocs:
+				//   This call may come after the tree has changed. If the node still lingers and returns !IsValid,
+				//   try to traverse the hierarchy and select the first IsValid parent hit, to make UX better.
+
+				SelectTreeNode(selectTreeNode);
+				SelectContentNode(selectContentNode);
+			}
+			else
+			{
+				// No selection, initialize as if we have selected the root node.
+				SelectTreeNode(_fileTree.Root);
+			}
+		}
+		//
+		// Summary:
+		//     Dispose of allocated resources once menu is closed.
+		public override void OnGuiOpened()
+		{
+			base.OnGuiOpened();
 		}
 		//
 		// Summary:
 		//     Dispose of allocated resources once menu is closed.
 		public override void OnGuiClosed()
 		{
-			if (_fileTree != null)
-			{
-				_fileTree.Dispose();
-				_fileTree = null;
-			}
-
 			if (_previewMusicPlayer != null)
 			{
 				if (_previewMusicPlayer.IsPlaying || _previewMusicPlayer.IsFinished)

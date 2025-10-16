@@ -28,7 +28,15 @@ namespace Instruments.Core
 		// Summary:
 		//     Local fully qualified path to the directory in which midi files are stored.
 		//     By default this points to the midi folder in the game directory.
-		public string LocalMidiDirectory { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "midi");
+		//     TODO@exocs: Implement per server directory for the client.
+		public string ClientMidiDirectory { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "midi");
+
+		//
+		// Summary:
+		//     Local fully qualified path to the directory in which server midi files are stored.
+		//     By default this points to the midi folder in the game directory.
+		//     TODO@exocs: Implement properly.
+		public string ServerMidiDirectory { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "midi");
 
 		//
 		// Summary:

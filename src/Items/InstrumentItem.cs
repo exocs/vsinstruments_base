@@ -345,7 +345,7 @@ namespace Instruments.Items
 			{
 				Action<string> sb = SetBand;
 				//SongSelectGUI songGui = new SongSelectGUI(capi, PlaySong, Definitions.Instance.GetSongList(), sb, Definitions.Instance.GetBandName());
-				SongSelectGUI songGUI = new SongSelectGUI(capi, Core.InstrumentModSettings.Instance.LocalMidiDirectory, InstrumentType);
+				SongSelectGUI songGUI = new SongSelectGUI(capi, InstrumentType);
 				songGUI.TryOpen();
 			}
 		}

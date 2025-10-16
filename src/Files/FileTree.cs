@@ -22,6 +22,7 @@ namespace Instruments.Files
 			Directories = 0x01,
 			Files = 0x02,
 			ExpandedOnly = 0x04,
+			SelectedOnly = 0x08,
 
 			All = Directories | Files | ExpandedOnly
 		}
@@ -52,6 +53,19 @@ namespace Instruments.Files
 				{
 					if (Parent != null)
 						return Path.Combine(Parent.FullPath, Name);
+
+					return Name;
+				}
+			}
+			//
+			// Summary:
+			//     Absolute path to this object.
+			public virtual string RelativePath
+			{
+				get
+				{
+					if (Parent != null && !Parent.IsRoot)
+						return Path.Combine(Parent.RelativePath, Name);
 
 					return Name;
 				}
@@ -199,14 +213,18 @@ namespace Instruments.Files
 				}
 				set
 				{
-					if (value && SetFlag(NodeFlags.IsExpanded))
+					if (value)
 					{
-						SetFlag(NodeFlags.IsDirty);
+						SetFlag(NodeFlags.IsExpanded);
 					}
-					else if (ClearFlag(NodeFlags.IsExpanded))
+					else
 					{
-						SetFlag(NodeFlags.IsDirty);
+						ClearFlag(NodeFlags.IsExpanded);
 					}
+
+					// There are valid use cases where the user wants the node to become dirty
+					// by explicitly re-setting the value. Mark as dirty regardless of state.
+					SetFlag(NodeFlags.IsDirty);
 				}
 			}
 			//
@@ -220,14 +238,18 @@ namespace Instruments.Files
 				}
 				set
 				{
-					if (value && SetFlag(NodeFlags.IsSelected))
+					if (value)
 					{
-						SetFlag(NodeFlags.IsDirty);
+						SetFlag(NodeFlags.IsSelected);
 					}
-					else if (ClearFlag(NodeFlags.IsSelected))
+					else
 					{
-						SetFlag(NodeFlags.IsDirty);
+						ClearFlag(NodeFlags.IsSelected);
 					}
+
+					// There are valid use cases where the user wants the node to become dirty
+					// by explicitly re-setting the value. Mark as dirty regardless of state.
+					SetFlag(NodeFlags.IsDirty);
 				}
 			}
 			//
@@ -251,6 +273,16 @@ namespace Instruments.Files
 					}
 
 					return depth;
+				}
+			}
+			//
+			// Summary:
+			//     Returns whether this node is the root node.
+			public virtual bool IsRoot
+			{
+				get
+				{
+					return false;
 				}
 			}
 			//
@@ -470,13 +502,16 @@ namespace Instruments.Files
 				bool includeDirectory = filter.HasFlag(Filter.Directories);
 				bool includeFiles = filter.HasFlag(Filter.Files);
 				bool includeExpandedOnly = filter.HasFlag(Filter.ExpandedOnly);
+				bool includeSelectedOnly = filter.HasFlag(Filter.SelectedOnly);
 
 				int depth = 0;
 				void appendNode(Node node, List<Node> destination)
 				{
+					bool selectionCheck = (!includeSelectedOnly || node.IsSelected);
+
 					if (node.IsDirectory)
 					{
-						if (includeDirectory)
+						if (includeDirectory && selectionCheck)
 							destination.Add(node);
 
 						if ((!includeExpandedOnly || node.IsExpanded))
@@ -488,7 +523,7 @@ namespace Instruments.Files
 								appendNode(child, destination);
 						}
 					}
-					else if (includeFiles)
+					else if (includeFiles && selectionCheck)
 					{
 						destination.Add(node);
 					}
@@ -527,6 +562,16 @@ namespace Instruments.Files
 				get
 				{
 					return Path.Combine(_rootPath, Name);
+				}
+			}
+			//
+			// Summary:
+			//     Returns whether this node is the root node.
+			public override bool IsRoot
+			{
+				get
+				{
+					return true;
 				}
 			}
 			//
