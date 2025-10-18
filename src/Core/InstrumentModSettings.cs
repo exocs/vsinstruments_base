@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 
 namespace Instruments.Core
 {
@@ -23,21 +24,32 @@ namespace Instruments.Core
 		[Obsolete("Abc is no longer supported!")]
 		public string abcServerLocation { get; set; } = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "abc_server";
 
-
 		//
 		// Summary:
-		//     Local fully qualified path to the directory in which midi files are stored.
-		//     By default this points to the midi folder in the game directory.
-		//     TODO@exocs: Implement per server directory for the client.
-		public string ClientMidiDirectory { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "midi");
-
+		//     Local fully qualified path to the directory which local (user) songs are stored in.
+		//     For the client this represents the directory with songs that are only known to that user, i.e.
+		//     all the local songs. In previous versions of the mod this would typically point to the game
+		//     directory to the 'abc' subfolder.
+		public string LocalSongsDirectory { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "Songs");
 		//
 		// Summary:
-		//     Local fully qualified path to the directory in which server midi files are stored.
-		//     By default this points to the midi folder in the game directory.
-		//     TODO@exocs: Implement properly.
-		public string ServerMidiDirectory { get; set; } = Path.Combine(Directory.GetCurrentDirectory(), "midi");
+		//     Local fully qualified path to the directory in which shared, per-server or per-client songs are stored in.
+		//     This is an addition in later versions of the mod that allows caching user content instead of re-sending it
+		//     on each playback request.
+		public string DataSongsDirectory { get; set; } = Path.Combine(GamePaths.DataPath, "Songs");
+		//
+		// Summary:
+		//     Ensures that the provided directory exists or creates one if there is none.
+		protected static void EnsureDirectoryExists(string path)
+		{
+			if (string.IsNullOrEmpty(path))
+				throw new ArgumentNullException();
 
+			if (!Directory.Exists(path))
+			{
+				Directory.CreateDirectory(path);
+			}
+		}
 		//
 		// Summary:
 		//     Loads the mod configuration, or creates default configuration if no mod settings are present.
@@ -52,6 +64,9 @@ namespace Instruments.Core
 					instance = new InstrumentModSettings();
 					api.StoreModConfig(instance, "instruments.json");
 				}
+
+				EnsureDirectoryExists(instance.LocalSongsDirectory);
+				EnsureDirectoryExists(instance.DataSongsDirectory);
 
 				_instance = instance;
 			}

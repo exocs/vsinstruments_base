@@ -74,7 +74,7 @@ namespace Instruments.Core
             MusicBlockManager.Instance.Reset(); // I think there's a manager for both Server and Client, so reset it I guess
             Definitions.Instance.Reset();
 
-            _fileManager = new FileManagerClient(api, InstrumentModSettings.Instance.ClientMidiDirectory);
+            _fileManager = new FileManagerClient(api, InstrumentModSettings.Instance);
 
 
 			clientApi.RegisterCommand("instruments", "instrument playback commands", "[enable|disable]", ParseClientCommand);

@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using Vintagestory.API.Client;
 using Instruments.Network.Packets;
+using Instruments.Core;
 
 namespace Instruments.Files
 {
@@ -22,14 +23,22 @@ namespace Instruments.Files
 		//     Creates new file manager.
 		// Parameters:
 		//   api: The game interface.
-		//   root: Root directory this manager will operate in.
-		public FileManagerClient(ICoreClientAPI api, string root) :
-			base(api, root)
+		//   localPath: Root directory of the user path.
+		//   dataPath: Root directory of the data path.
+		public FileManagerClient(ICoreClientAPI api, string localPath, string dataPath) :
+			base(api, localPath, dataPath)
 		{
 			ClientAPI = api;
 			ClientChannel = api.Network.RegisterChannel(Constants.Channel.FileManager)
 				.RegisterMessageType<FileTransferPacket>()
 				.SetMessageHandler<FileTransferPacket>(OnTransferFilePacket);
+		}
+		//
+		// Summary:
+		//     Creates new file manager.
+		public FileManagerClient(ICoreClientAPI api, InstrumentModSettings settings) :
+			this(api, settings.LocalSongsDirectory, settings.DataSongsDirectory)
+		{
 		}
 		//
 		// Summary:

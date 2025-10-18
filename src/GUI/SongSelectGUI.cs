@@ -151,7 +151,7 @@ namespace Instruments.GUI
 			: base(capi)
 		{
 			// Retrieve the client file tree from the mod system.
-			_fileTree = capi.ModLoader.GetModSystem<InstrumentModClient>().FileManager.Tree;
+			_fileTree = capi.ModLoader.GetModSystem<InstrumentModClient>().FileManager.UserTree;
 
 			// TODO@exocs: Solve more pragmatically, for now this is good enough.
 			_fileTree.NodeChanged += (node) =>

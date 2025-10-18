@@ -18,10 +18,14 @@ namespace Instruments.Files
 	//     Base class for all file management operations, compressions and file transfers.
 	public abstract class FileManager
 	{
-		//	 
+		//
 		// Summary:	 
-		//     Returns the file tree this class operates in.
-		public FileTree Tree { get; private set; }
+		//     The file tree that represents the user directory with local files.
+		public FileTree UserTree { get; private set; }
+		//
+		// Summary:	 
+		//     The file tree that represents the shared data directory with files received from the server or other clients.
+		public FileTree DataTree { get; private set; }
 		//
 		// Summary:
 		//     Compresses the provided stream using the Deflate algorithm.
@@ -100,10 +104,12 @@ namespace Instruments.Files
 		//     Creates new file manager.
 		// Parameters:
 		//   api: The game interface.
-		//   root: Root directory this manager will operate in.
-		protected FileManager(ICoreAPI api, string root)
+		//   localPath: Root directory of the user path.
+		//   dataPath: Root directory of the data path.
+		protected FileManager(ICoreAPI api, string userPath, string dataPath)
 		{
-			Tree = new FileTree(root);
+			UserTree = new FileTree(userPath);
+			DataTree = new FileTree(dataPath);
 		}
 	}
 }

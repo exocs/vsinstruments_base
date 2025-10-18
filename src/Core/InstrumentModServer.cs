@@ -69,7 +69,7 @@ namespace Instruments.Core
             MusicBlockManager.Instance.Reset();
             ABCParsers.Instance.SetAPI(serverAPI);
 
-            _fileManager = new FileManagerServer(api, InstrumentModSettings.Instance.ServerMidiDirectory);
+            _fileManager = new FileManagerServer(api, InstrumentModSettings.Instance);
 
             serverAPI.Event.PlayerJoin += SendSongs;
         }

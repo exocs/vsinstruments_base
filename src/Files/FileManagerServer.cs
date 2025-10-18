@@ -2,6 +2,7 @@
 using Vintagestory.API.Config;
 using Vintagestory.API.Server;
 using Instruments.Network.Packets;
+using Instruments.Core;
 
 namespace Instruments.Files
 {
@@ -23,9 +24,10 @@ namespace Instruments.Files
 		//     Creates new file manager.
 		// Parameters:
 		//   api: The game interface.
-		//   root: Root directory this manager will operate in.
-		public FileManagerServer(ICoreServerAPI api, string root) :
-			base(api, root)
+		//   localPath: Root directory of the user path.
+		//   dataPath: Root directory of the data path.
+		public FileManagerServer(ICoreServerAPI api, string localPath, string dataPath) :
+			base(api, localPath, dataPath)
 		{
 			ServerAPI = api;
 			ServerChannel = api.Network.RegisterChannel(Constants.Channel.FileManager)
@@ -50,10 +52,17 @@ namespace Instruments.Files
 		}
 		//
 		// Summary:
+		//     Creates new file manager.
+		public FileManagerServer(ICoreServerAPI api, InstrumentModSettings settings) :
+			this(api, settings.LocalSongsDirectory, settings.DataSongsDirectory)
+		{
+		}
+		//
+		// Summary:
 		//     Sends file to the provided player(s).
 		protected void SendFile(string path, params IServerPlayer[] destination)
 		{
-			FileTree.Node node = Tree.Find(path);
+			FileTree.Node node = UserTree.Find(path);
 			if (node == null)
 			{
 				foreach (IServerPlayer player in destination)
