@@ -58,7 +58,6 @@ namespace Instruments.Playback
 				$"Start playback broadcast received:" +
 				$"  Client: {packet.ClientId}\n" +
 				$"  File: {packet.File}\n" +
-				$"  Local File: {packet.File}\n" +
 				$"  Channel: {packet.Channel}\n" +
 				$"  Instrument: {packet.Instrument}\n"
 				);
