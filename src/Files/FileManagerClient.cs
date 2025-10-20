@@ -30,8 +30,10 @@ namespace Instruments.Files
 		{
 			ClientAPI = api;
 			ClientChannel = api.Network.RegisterChannel(Constants.Channel.FileManager)
-				.RegisterMessageType<FileTransferPacket>()
-				.SetMessageHandler<FileTransferPacket>(OnTransferFilePacket);
+				.RegisterMessageType<GetFileRequest>()
+				.RegisterMessageType<GetFileResponse>()
+
+				.SetMessageHandler<GetFileRequest>(OnGetFileRequest);
 		}
 		//
 		// Summary:
@@ -42,28 +44,29 @@ namespace Instruments.Files
 		}
 		//
 		// Summary:
-		//     Callback raised when the file manager receives a file.
-		protected virtual void OnTransferFilePacket(FileTransferPacket packet)
+		//     Callback raised when the server requests a file.
+		protected void OnGetFileRequest(GetFileRequest packet)
 		{
 			ClientAPI.ShowChatMessage(
-				$"Received file: {packet.Name}\n" +
-				$"  Original size: {packet.Size}b\n" +
-				$"  Compressed size: {packet.Data.Length}b\n"
+				$"Server file request received:" +
+				$"  ID: {packet.RequestID}\n" +
+				$"  File: {packet.File}\n"
 				);
 
-			using (MemoryStream decompressedFile = new MemoryStream())
+			FileTree.Node node = UserTree.Find(packet.File);
+			if (node == null)
 			{
-				Decompress(packet.Data, decompressedFile, packet.Compression);
-				try
-				{
-					decompressedFile.Seek(0, SeekOrigin.Begin);
-					MidiParser.MidiFile midi = new MidiParser.MidiFile(decompressedFile);
-				}
-				catch
-				{
-
-				}
+				// TODO@exocs:
+				//  If the user moved or removed the file shortly after they sent a request..
+				//  just scold them for being an idiot honestly. Fix this later.
+				ClientAPI.ShowChatMessage("Why are you like this?");
+				return;
 			}
+
+			GetFileResponse response = new GetFileResponse();
+			response.RequestID = packet.RequestID;
+			FileToPacket(node, response);
+			ClientChannel.SendPacket(response);
 		}
 	}
 }

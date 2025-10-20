@@ -5,6 +5,7 @@ using Vintagestory.API.Server;
 using Instruments.Network.Packets;
 using Instruments.Blocks;
 using Instruments.Files;
+using Instruments.Playback;
 
 namespace Instruments.Core
 {
@@ -39,6 +40,8 @@ namespace Instruments.Core
 			}
 		}
 
+        private PlaybackManagerServer _playbackManager;
+
 		public override void StartServerSide(ICoreServerAPI api)
         {
             serverAPI = api;
@@ -70,6 +73,7 @@ namespace Instruments.Core
             ABCParsers.Instance.SetAPI(serverAPI);
 
             _fileManager = new FileManagerServer(api, InstrumentModSettings.Instance);
+            _playbackManager = new PlaybackManagerServer(api, _fileManager);
 
             serverAPI.Event.PlayerJoin += SendSongs;
         }

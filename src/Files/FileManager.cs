@@ -1,7 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Vintagestory.API.Common;
+using Instruments.Network.Packets;
 
 namespace Instruments.Files
 {
@@ -110,6 +113,76 @@ namespace Instruments.Files
 		{
 			UserTree = new FileTree(userPath);
 			DataTree = new FileTree(dataPath);
+		}
+		//
+		// Summary:
+		//     Creates file for writing at the provided location in the Data tree.
+		protected FileStream CreateFile(string file, out FileTree.Node node)
+		{
+			string fullPath = Path.Combine(DataTree.Root.FullPath, file);
+			string fullDirectoryPath = Path.GetDirectoryName(fullPath);
+			if (!Directory.Exists(fullDirectoryPath))
+			{
+				Directory.CreateDirectory(fullDirectoryPath);
+			}
+
+			FileStream stream = new FileStream(fullPath, FileMode.CreateNew);
+			node = DataTree.Find(file);
+			return stream;
+		}
+		//
+		// Summary:
+		//     Fills the provided packet with the provided file data.
+		protected void FileToPacket(FileTree.Node node, GetFileResponse packet, CompressionMethod compression = CompressionMethod.Deflate)
+		{
+			using (FileStream file = File.OpenRead(node.FullPath))
+			{
+				packet.Size = (int)(file.Length - file.Position);
+				packet.Data = Compress(file, compression);
+				packet.Compression = compression;
+			}
+		}
+		//
+		// Summary:
+		//     Regex used for sanitization of file names.
+		private static string _sanitizeFileNameRegex;
+		//
+		// Summary:
+		//     Initialize static properties of the file manager.
+		static FileManager()
+		{
+			char[] invalidCharacters = Path.GetInvalidFileNameChars()
+				.Concat(Path.GetInvalidPathChars())
+				.Distinct()
+				.ToArray();
+
+			_sanitizeFileNameRegex = $"[{Regex.Escape(new string(invalidCharacters))}]";
+		}
+		//
+		// Summary:
+		//     Returns sanitized unique user id from the provided user id.
+		// Parameters:
+		//   uid: Unique user id to sanitize.
+		//   replacement: The string disallowed characters are replaced by.
+		public static string SanitizeUID(string uuid, string replacement = "")
+		{
+			return Regex.Replace(uuid, _sanitizeFileNameRegex, replacement);
+		}
+		//
+		// Summary:
+		//     Returns the relative path for a file of provided player as a path in the data tree.
+		public static string GetDataPath(IPlayer player, string file)
+		{
+			if (Path.IsPathFullyQualified(file))
+				throw new ArgumentException("File must be relative path!");
+
+			string uid = SanitizeUID(player.PlayerUID);
+			if (!file.Contains(uid))
+			{
+				return Path.Combine(uid, file);
+			}
+
+			return file;
 		}
 	}
 }

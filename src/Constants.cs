@@ -60,6 +60,11 @@ namespace Instruments
 			// Summary:
 			//     Defines the name of the networking channel used by file manager for transfering files.
 			public const string FileManager = "FileTransferChannel";
+
+			//
+			// Summary:
+			//     Defines the name of the networking channel used by actual song playback.
+			public const string Playback = "PlaybackChannel";
 		}
 		//
 		// Summary:

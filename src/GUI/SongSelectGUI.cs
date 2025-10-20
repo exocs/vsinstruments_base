@@ -63,6 +63,10 @@ namespace Instruments.GUI
 		private MusicPlayerMidi _previewMusicPlayer;
 		//
 		// Summary:
+		//     The instrument type the songs should be played with (if any).
+		private InstrumentType _instrumentType;
+		//
+		// Summary:
 		//     Currently active track by its index.
 		private int _activeTrack = -1;
 		//
@@ -166,6 +170,7 @@ namespace Instruments.GUI
 			_treeNodes = new List<FileTree.Node>();
 			_contentNodes = new List<FileTree.Node>();
 			_previewMusicPlayer = new PreviewPlayerMidi(capi, instrumentType); // If no instrument is provided, try to use anything.
+			_instrumentType = instrumentType;
 
 			bandNameChange = bandChange;
 			SetupDialog(title, bandName);
@@ -687,6 +692,12 @@ namespace Instruments.GUI
 				components.Add(new LinkTextComponent(capi, "Play", rightFont, (txc) =>
 				{
 					// Play callback
+					capi.ModLoader.GetModSystem<InstrumentModClient>().RequestStartPlayback(
+						node.RelativePath,
+						trackIndex,
+						_instrumentType
+						);
+
 				}));
 				components.Add(new RichTextComponent(capi, Environment.NewLine, leftFont));
 			}

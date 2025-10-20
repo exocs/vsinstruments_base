@@ -806,6 +806,12 @@ namespace Instruments.Files
 			// Replace all separators with the proper format.
 			path = path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
 
+			// Trim any separator chars that the path starts with
+			while (path.StartsWith(Path.DirectorySeparatorChar))
+			{
+				path = path.Substring(1);
+			}
+
 			// Determine if path is full or relative; if the path is fully qualified and doesn't align
 			// with this filemanager's root path, the find can automatically fail.
 			if (Path.IsPathFullyQualified(path))

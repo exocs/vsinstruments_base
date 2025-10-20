@@ -7,6 +7,7 @@ using Instruments.Blocks;
 using Instruments.Network.Packets;
 using Instruments.Types;
 using Instruments.Files;
+using Instruments.Playback;
 
 namespace Instruments.Core
 {
@@ -43,6 +44,8 @@ namespace Instruments.Core
 			}
 		}
 
+        private PlaybackManagerClient _playbackManager;
+
 		public override void StartClientSide(ICoreClientAPI api)
         {
             clientApi = api;
@@ -75,11 +78,14 @@ namespace Instruments.Core
             Definitions.Instance.Reset();
 
             _fileManager = new FileManagerClient(api, InstrumentModSettings.Instance);
+            _playbackManager = new PlaybackManagerClient(api, _fileManager);
 
 
 			clientApi.RegisterCommand("instruments", "instrument playback commands", "[enable|disable]", ParseClientCommand);
             clientSideEnable = true;
             clientSideReady = true;
+
+            clientApi.Event.RegisterGameTickListener(_playbackManager.Update, 10);
 
             //clientApi.ShowChatMessage("Cats!");
         }
@@ -322,6 +328,11 @@ namespace Instruments.Core
             // }
             setupDone = true;
         }
+
+        public void RequestStartPlayback(string filepath, int channel, InstrumentType instrumentType)
+        {
+            _playbackManager.RequestStartPlayback(filepath, channel, instrumentType);
+		}
 
         #endregion
     }
