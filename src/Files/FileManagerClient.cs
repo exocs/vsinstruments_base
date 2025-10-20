@@ -62,6 +62,7 @@ namespace Instruments.Files
 
 			// Directly send the response back.
 			GetFileResponse response = new GetFileResponse();
+			response.RequestID = request.RequestID;
 			FileToPacket(node, response);
 			ClientChannel.SendPacket(response);
 		}
@@ -82,12 +83,11 @@ namespace Instruments.Files
 		{
 			CompleteRequest(packet.RequestID, (request) =>
 			{
-				FileTree.Node result;
-				using (FileStream file = CreateFile(request.DataPath, out result))
+				using (FileStream file = CreateFile(request.DataPath))
 				{
 					Decompress(packet.Data, file, packet.Compression);
 				}
-				return result;
+				return DataTree.Find(request.DataPath);
 			});
 		}
 	}

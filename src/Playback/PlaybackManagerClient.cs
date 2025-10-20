@@ -1,8 +1,11 @@
-﻿using Vintagestory.API.Common;
+﻿using System;
+using System.Collections.Generic;
+using Vintagestory.API.Common;
 using Vintagestory.API.Client;
 using Instruments.Files;
 using Instruments.Network.Packets;
 using Instruments.Types;
+using Instruments.Players;
 
 namespace Instruments.Playback
 {
@@ -22,6 +25,10 @@ namespace Instruments.Playback
 		protected FileManagerClient ClientFileManager { get; private set; }
 		//
 		// Summary:
+		//     Music players per player.
+		protected Dictionary<int, MusicPlayerMidi> ClientPlayers { get; private set; }
+		//
+		// Summary:
 		//     Creates new client side playback manager.
 		public PlaybackManagerClient(ICoreClientAPI api, FileManagerClient fileManager)
 			: base(api, fileManager)
@@ -36,6 +43,7 @@ namespace Instruments.Playback
 				.SetMessageHandler<StartPlaybackOwner>(OnStartPlaybackOwner);
 
 			ClientFileManager = fileManager;
+			ClientPlayers = new Dictionary<int, MusicPlayerMidi>(64);
 		}
 		//
 		// Summary:
@@ -54,20 +62,14 @@ namespace Instruments.Playback
 		//     This callback is called for all players except the actual instigator (the instrument player).
 		protected void OnStartPlaybackBroadcast(StartPlaybackBroadcast packet)
 		{
-			ClientAPI.ShowChatMessage(
-				$"Start playback broadcast received:" +
-				$"  Client: {packet.ClientId}\n" +
-				$"  File: {packet.File}\n" +
-				$"  Channel: {packet.Channel}\n" +
-				$"  Instrument: {packet.Instrument}\n"
-				);
-
+			long elapsedMilliseconds = ClientAPI.World.ElapsedMilliseconds;
 			IPlayer player = ClientAPI.World.AllOnlinePlayers[packet.ClientId];
 			ClientFileManager.RequestFile(player, packet.File, (node, context) =>
 			{
-				// TODO@exocs:
-				//   Play the file or seek to the playback.
-			});
+				long startTimeMsec = (long)context;
+				CreateMusicPlayer(player, node, packet.Channel, InstrumentType.Find(packet.Instrument), startTimeMsec);
+
+			}, elapsedMilliseconds);
 		}
 		//
 		// Summary:
@@ -75,15 +77,53 @@ namespace Instruments.Playback
 		//     This callback is called for the actual instigator only.
 		protected void OnStartPlaybackOwner(StartPlaybackOwner packet)
 		{
-			ClientAPI.ShowChatMessage(
-				$"Start playback owner received:" +
-				$"  File: {packet.File}\n" +
-				$"  Channel: {packet.Channel}\n" +
-				$"  Instrument: {packet.Instrument}\n"
-				);
-
 			// TODO@exocs: Play the file!
 			FileTree.Node node = ClientFileManager.UserTree.Find(packet.File);
+			CreateMusicPlayer(ClientAPI.World.Player, node, packet.Channel, InstrumentType.Find(packet.Instrument), ClientAPI.World.ElapsedMilliseconds);
+		}
+		//
+		// Summary:
+		//     Creates music player for the provided player.
+		//     If a player was present previously, it is replaced.
+		protected void CreateMusicPlayer(IPlayer player, FileTree.Node node, int channel, InstrumentType instrumentType, long startTimeMsec = 0)
+		{
+			int clientId = player.ClientId;
+			if (ClientPlayers.Remove(clientId, out MusicPlayerMidi previousPlayer))
+			{
+				if (previousPlayer.IsPlaying)
+					previousPlayer.Stop();
+
+				previousPlayer.Dispose();
+			}
+
+			try
+			{
+				MidiParser.MidiFile midi = new MidiParser.MidiFile(node.FullPath);
+				MusicPlayerMidi musicPlayer = new PlayerMusicPlayerMidi(ClientAPI, player, instrumentType);
+				musicPlayer.Play(midi, channel);
+
+				double time = (ClientAPI.World.ElapsedMilliseconds - startTimeMsec) / 1000.0;
+				double duration = musicPlayer.Duration;
+				musicPlayer.Seek(Math.Min(time, duration));
+
+				ClientPlayers.Add(clientId, musicPlayer);
+			}
+			catch
+			{
+				// Bad.
+			}
+		}
+		//
+		// Summary:
+		//     Updates this managed and all its music players.
+		public override void Update(float deltaTime)
+		{
+			// TODO@exocs: Not very efficient.
+			var musicPlayers = ClientPlayers.Values;
+			foreach (MusicPlayerMidi player in musicPlayers)
+			{
+				if (player.IsPlaying) player.Update(deltaTime);
+			}
 		}
 	}
 }

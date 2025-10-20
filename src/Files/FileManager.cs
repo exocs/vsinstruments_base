@@ -227,7 +227,7 @@ namespace Instruments.Files
 		//
 		// Summary:
 		//     Creates file for writing at the provided location in the Data tree.
-		protected FileStream CreateFile(string file, out FileTree.Node node)
+		protected FileStream CreateFile(string file)
 		{
 			string fullPath = Path.Combine(DataTree.Root.FullPath, file);
 			string fullDirectoryPath = Path.GetDirectoryName(fullPath);
@@ -236,9 +236,7 @@ namespace Instruments.Files
 				Directory.CreateDirectory(fullDirectoryPath);
 			}
 
-			FileStream stream = new FileStream(fullPath, FileMode.CreateNew);
-			node = DataTree.Find(file);
-			return stream;
+			return new FileStream(fullPath, FileMode.CreateNew);
 		}
 		//
 		// Summary:
