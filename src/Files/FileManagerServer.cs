@@ -13,87 +13,12 @@ namespace Instruments.Files
 	{
 		//
 		// Summary:
-		//     Method delegate for callbacks that request a file.
-		public delegate void RequestFileCallback(FileTree.Node file);
-		//
-		// Summary:
-		//     A single file request that can be queued for the manager to process.
-		protected class FileRequest
-		{
-			//
-			// Summary:
-			//     Unique identifier of this request.
-			private int _id;
-			//
-			// Summary:
-			//     Owning file manager.
-			private FileManagerServer _owner;
-			//
-			// Summary:
-			//     The player the file is requested from.
-			private IServerPlayer _source;
-			//
-			// Summary:
-			//     Relative file path to the requested file.
-			private string _file;
-			//
-			// Summary:
-			//     Completion callback.
-			private RequestFileCallback _completionCallback;
-			//
-			// Summary:
-			//     Creates new file request.
-			public FileRequest(FileManagerServer owner, IServerPlayer source, int id, string file, RequestFileCallback callback)
-			{
-				_owner = owner;
-				_source = source;
-				_file = file;
-				_id = id;
-				_completionCallback = callback;
-			}
-			//
-			// Summary:
-			//     Returns the target data path of this request.
-			public string DataPath
-			{
-				get
-				{
-					return GetDataPath(_source, _file);
-				}
-			}
-			//
-			// Summary:
-			//     Completes this request.
-			public void Complete(FileTree.Node file)
-			{
-				_completionCallback(file);
-			}
-		}
-		//
-		// Summary:
 		//     Returns the interface to the game.
 		protected ICoreServerAPI ServerAPI { get; }
 		//	 
 		// Summary:	 
 		//     Returns the networking channel for file transactions.
 		protected IServerNetworkChannel ServerChannel { get; private set; }
-		//
-		// Summary:
-		//     Pending requests by their id.
-		// TODO@exocs: Timeout and clear on player disconnection
-		protected Dictionary<int, FileRequest> Requests { get; private set; }
-
-		//
-		// Summary:
-		//     Last used request ID.
-		private static int _requestID;
-		//
-		// Summary:
-		//     Returns next request ID in sequence.
-		private static int NextRequestID()
-		{
-			return _requestID++;
-		}
 		//
 		// Summary:
 		//     Creates new file manager.
@@ -109,9 +34,8 @@ namespace Instruments.Files
 				.RegisterMessageType<GetFileRequest>()
 				.RegisterMessageType<GetFileResponse>()
 
-				.SetMessageHandler<GetFileResponse>(OnGetFileResponse);
-
-			Requests = new Dictionary<int, FileRequest>(32);
+				.SetMessageHandler<GetFileRequest>(OnGetFileRequest)
+				.SetMessageHandler<GetFileResponse>(OnGetFile);
 		}
 		//
 		// Summary:
@@ -122,79 +46,52 @@ namespace Instruments.Files
 		}
 		//
 		// Summary:
-		//     Requests the provided file from the source player. Fires callback on completion.
-		//     This method will return locally cached files, if any are present before dispatching requests.
-		public void GetFile(IServerPlayer source, string file, RequestFileCallback callback)
+		//     Submits a file request for processing.
+		protected override void SubmitRequest(FileRequest request)
 		{
-			ServerAPI.Logger.Notification(
-				$"Server fetching file:" +
-				$"  PlayerUID: {source.PlayerUID}\n" +
-				$"  ClientId: {source.ClientId}\n" +
-				$"  File: {file}\n"
-				);
-
-			// If the file is already present, there is no need to create a request,
-			// return the file directly instead:
-			string dataPath = GetDataPath(source, file);
-			FileTree.Node data = DataTree.Find(dataPath);
-			if (data != null)
-			{
-				ServerAPI.Logger.Notification(
-					$"Using data file:" +
-					$"  PlayerUID: {source.PlayerUID}\n" +
-					$"  ClientId: {source.ClientId}\n" +
-					$"  File: {file}\n"
-				);
-
-				callback.Invoke(data);
-				return;
-			}
-
-			// TODO@exocs: Validate the path and make sure it's not illicit!
-			// For now at least something C:
-			if (Path.IsPathFullyQualified(dataPath) || Path.IsPathRooted(dataPath))
-				throw new InvalidDataException();
-
-
-			// With the file not present, add the request to the "queue".
-			int requestID = NextRequestID();
-			FileRequest request = new FileRequest(this, source, requestID, file, callback);
-			Requests.Add(requestID, request);
-
-			// And send the actual request packet.
 			GetFileRequest requestPacket = new GetFileRequest();
-			requestPacket.File = file;
-			requestPacket.RequestID = requestID;
-			ServerChannel.SendPacket(requestPacket, source);
+			requestPacket.RequestID = request.RequestID;
+			requestPacket.File = request.RelativePath;
+			ServerChannel.SendPacket(requestPacket, request.Source as IServerPlayer);
 		}
 		//
 		// Summary:
 		//     Requests the provided file from the source player. Fires callback on completion.
 		//     This method will return locally cached files, if any are present before dispatching requests.
-		protected void OnGetFileResponse(IServerPlayer source, GetFileResponse response)
+		protected void OnGetFile(IServerPlayer source, GetFileResponse packet)
 		{
-			int requestID = response.RequestID;
-			if (Requests.TryGetValue(requestID, out FileRequest request))
+			CompleteRequest(packet.RequestID, (request) =>
 			{
-				FileTree.Node node;
-				using (FileStream file = CreateFile(request.DataPath, out node))
+				FileTree.Node result;
+				using (FileStream file = CreateFile(request.DataPath, out result))
 				{
-					Decompress(response.Data, file, response.Compression);
-					file.Flush();
+					Decompress(packet.Data, file, packet.Compression);
 				}
-
-				ServerAPI.Logger.Notification(
-					$"Received remove file:" +
-					$"  PlayerUID: {source.PlayerUID}\n" +
-					$"  ClientId: {source.ClientId}\n" +
-					$"  File: {request.DataPath}\n"
-				);
-
-				if (Requests.Remove(requestID))
-				{
-					request.Complete(node);
-				}
+				return result;
+			});
+		}
+		//
+		// Summary:
+		//     Callback raised when a client requests song from the server.
+		protected void OnGetFileRequest(IServerPlayer source, GetFileRequest packet)
+		{
+			string dataPath = GetDataPath(source, packet.File);
+			FileTree.Node node = DataTree.Find(dataPath);
+			if (node == null)
+			{
+				throw new FileNotFoundException();
 			}
+
+			// The server sends the playback ticket only once it has obtained its
+			// own copy of the file. Fire straight away.
+			// TODO@exocs:
+			//   Cache the last used files in already compressed state,
+			//   and just dispatch the available data directly.
+			GetFileResponse response = new GetFileResponse();
+			response.RequestID = packet.RequestID;
+			FileToPacket(node, response);
+
+			ServerChannel.SendPacket(response, source);
 		}
 	}
 }

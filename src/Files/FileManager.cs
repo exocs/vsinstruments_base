@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -21,6 +22,114 @@ namespace Instruments.Files
 	//     Base class for all file management operations, compressions and file transfers.
 	public abstract class FileManager
 	{
+		//
+		// Summary:
+		//     Method delegate for callbacks that request a file.
+		public delegate void RequestFileCallback(FileTree.Node file, object context);
+		//
+		// Summary:
+		//     Method delegate for callbacks that finish a file request.
+		protected delegate FileTree.Node CreateFileCallback(FileRequest request);
+		//
+		// Summary:
+		//     A single file request that can be queued for the manager to process.
+		protected class FileRequest
+		{
+			//
+			// Summary:
+			//     Unique identifier of this request.
+			private int _id;
+			//
+			// Summary:
+			//     The player the file is requested from.
+			private IPlayer _source;
+			//
+			// Summary:
+			//     Relative file path to the requested file.
+			private string _file;
+			//
+			// Summary:
+			//     Completion callback.
+			private RequestFileCallback _completionCallback;
+			//
+			// Summary:
+			//     User-provided context object or null.
+			private object _context;
+			//
+			// Summary:
+			//     Creates new file request.
+			public FileRequest(IPlayer source, int id, string file, RequestFileCallback callback, object context = null)
+			{
+				_source = source;
+				_file = file;
+				_id = id;
+				_completionCallback = callback;
+				_context = context;
+			}
+			//
+			// Summary:
+			//     Returns the source client.
+			public IPlayer Source
+			{
+				get
+				{
+					return _source;
+				}
+			}
+			//
+			// Summary:
+			//     Returns the unique identifier of this request.
+			public int RequestID
+			{
+				get
+				{
+					return _id;
+				}
+			}
+			//
+			// Summary:
+			//     Returns the target relative path of this request.
+			public string RelativePath
+			{
+				get
+				{
+					return _file;
+				}
+			}
+			//
+			// Summary:
+			//     Returns the target data path of this request.
+			public string DataPath
+			{
+				get
+				{
+					return GetDataPath(_source, _file);
+				}
+			}
+			//
+			// Summary:
+			//     Completes this request.
+			public void Complete(FileTree.Node file)
+			{
+				_completionCallback(file, _context);
+			}
+		}
+		//
+		// Summary:
+		//     Pending requests by their id.
+		// TODO@exocs: Timeout and clear on player disconnection
+		protected Dictionary<int, FileRequest> Requests { get; private set; }
+		//
+		// Summary:
+		//     Last used request ID.
+		private static int _nextRequestId;
+		//
+		// Summary:
+		//     Returns next request ID in sequence.
+		protected static int NextRequestID()
+		{
+			return _nextRequestId++;
+		}
 		//
 		// Summary:	 
 		//     The file tree that represents the user directory with local files.
@@ -113,6 +222,7 @@ namespace Instruments.Files
 		{
 			UserTree = new FileTree(userPath);
 			DataTree = new FileTree(dataPath);
+			Requests = new Dictionary<int, FileRequest>(32);
 		}
 		//
 		// Summary:
@@ -183,6 +293,69 @@ namespace Instruments.Files
 			}
 
 			return file;
+		}
+		//
+		// Summary:
+		//     Creates new file request with the provided data. The returned request may be null and the 
+		//     specified completion callback may be invoked immediately if a cached file for given file
+		//     is already present and managed by this manager.
+		protected FileRequest CreateRequest(IPlayer source, string file, RequestFileCallback callback, object context)
+		{
+			// If the file is already present, there is no need to create a request,
+			// return the file directly instead:
+			string dataPath = GetDataPath(source, file);
+			FileTree.Node data = DataTree.Find(dataPath);
+			if (data != null)
+			{
+				callback.Invoke(data, context);
+				return null;
+			}
+
+			// TODO@exocs: Validate the path and make sure it's not illicit!
+			// For now at least something C:
+			if (Path.IsPathFullyQualified(dataPath) || Path.IsPathRooted(dataPath))
+				throw new InvalidDataException();
+
+			// With the file not present, add the request to the "queue".
+			int requestID = NextRequestID();
+			FileRequest request = new FileRequest(source, requestID, file, callback, context);
+			Requests.Add(requestID, request);
+
+			return request;
+		}
+		//
+		// Summary:
+		//     Submits the request for processing, for instance by sending a packet.
+		protected abstract void SubmitRequest(FileRequest request);
+		//
+		// Summary:
+		//     Completes the provided request, returning the resulting file node.
+		protected void CompleteRequest(int requestID, CreateFileCallback createFile)
+		{
+			if (Requests.TryGetValue(requestID, out FileRequest request))
+			{
+				if (Requests.Remove(requestID))
+				{
+					FileTree.Node result = createFile(request);
+					request.Complete(result);
+				}
+			}
+		}
+		//
+		// Summary:
+		//     Requests a file from this manager.
+		// Parameters:
+		//   source: The source of this file or in other words, the original owner.
+		//   file: Relative path of the file to be requested.
+		//   completionCallback: Callback raised when the requested file becomes available.
+		//   context: Optional user-provided context passed to completion callback.
+		public void RequestFile(IPlayer source, string file, RequestFileCallback completionCallback, object context = null)
+		{
+			FileRequest request = CreateRequest(source, file, completionCallback, context);
+			if (request != null)
+			{
+				SubmitRequest(request);
+			}
 		}
 	}
 }

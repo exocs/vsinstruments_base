@@ -1,4 +1,5 @@
-﻿using Vintagestory.API.Client;
+﻿using Vintagestory.API.Common;
+using Vintagestory.API.Client;
 using Instruments.Files;
 using Instruments.Network.Packets;
 using Instruments.Types;
@@ -63,7 +64,15 @@ namespace Instruments.Playback
 				);
 
 			FileTree.Node node = ClientFileManager.DataTree.Find(packet.File);
-			// TODO@exocs: Request file from the server if none is present.
+			if (node == null)
+			{
+				IPlayer player = ClientAPI.World.AllOnlinePlayers[packet.ClientId];
+				ClientFileManager.RequestFile(player, packet.File, (node, context) =>
+				{
+					// TODO@exocs:
+					//   Play the file or seek to the playback.
+				});
+			}
 		}
 		//
 		// Summary:
@@ -78,6 +87,7 @@ namespace Instruments.Playback
 				$"  Instrument: {packet.Instrument}\n"
 				);
 
+			// TODO@exocs: Play the file!
 			FileTree.Node node = ClientFileManager.UserTree.Find(packet.File);
 		}
 	}

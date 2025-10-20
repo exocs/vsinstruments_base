@@ -48,7 +48,7 @@ namespace Instruments.Playback
 			}
 
 			// Request the specified file:
-			ServerFileManager.GetFile(source, packet.File, (node) =>
+			ServerFileManager.RequestFile(source, packet.File, (node, context) =>
 			{
 				// Upon receiving the request file, approve the request and
 				// start the playback both locally and for all relevant clients:

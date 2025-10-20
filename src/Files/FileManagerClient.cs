@@ -1,7 +1,7 @@
-﻿using System.IO;
-using Vintagestory.API.Client;
-using Instruments.Network.Packets;
+﻿using Vintagestory.API.Client;
+using System.IO;
 using Instruments.Core;
+using Instruments.Network.Packets;
 
 namespace Instruments.Files
 {
@@ -33,7 +33,9 @@ namespace Instruments.Files
 				.RegisterMessageType<GetFileRequest>()
 				.RegisterMessageType<GetFileResponse>()
 
-				.SetMessageHandler<GetFileRequest>(OnGetFileRequest);
+				.SetMessageHandler<GetFileRequest>(OnFileRequested)
+				.SetMessageHandler<GetFileResponse>(OnGetFile);
+
 		}
 		//
 		// Summary:
@@ -45,15 +47,10 @@ namespace Instruments.Files
 		//
 		// Summary:
 		//     Callback raised when the server requests a file.
-		protected void OnGetFileRequest(GetFileRequest packet)
+		//   TODO@exocs: This is a bit unconventional in relation to the rest of the API
+		protected void OnFileRequested(GetFileRequest request)
 		{
-			ClientAPI.ShowChatMessage(
-				$"Server file request received:" +
-				$"  ID: {packet.RequestID}\n" +
-				$"  File: {packet.File}\n"
-				);
-
-			FileTree.Node node = UserTree.Find(packet.File);
+			FileTree.Node node = UserTree.Find(request.File);
 			if (node == null)
 			{
 				// TODO@exocs:
@@ -63,10 +60,35 @@ namespace Instruments.Files
 				return;
 			}
 
+			// Directly send the response back.
 			GetFileResponse response = new GetFileResponse();
-			response.RequestID = packet.RequestID;
 			FileToPacket(node, response);
 			ClientChannel.SendPacket(response);
+		}
+		//
+		// Summary:
+		//     Submits a file request for processing.
+		protected override void SubmitRequest(FileRequest request)
+		{
+			GetFileRequest requestPacket = new GetFileRequest();
+			requestPacket.RequestID = request.RequestID;
+			requestPacket.File = request.RelativePath;
+			ClientChannel.SendPacket(requestPacket);
+		}
+		//
+		// Summary:
+		//     Callback raised when the server requests a file.
+		protected void OnGetFile(GetFileResponse packet)
+		{
+			CompleteRequest(packet.RequestID, (request) =>
+			{
+				FileTree.Node result;
+				using (FileStream file = CreateFile(request.DataPath, out result))
+				{
+					Decompress(packet.Data, file, packet.Compression);
+				}
+				return result;
+			});
 		}
 	}
 }
