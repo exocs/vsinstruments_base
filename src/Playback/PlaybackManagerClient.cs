@@ -62,16 +62,12 @@ namespace Instruments.Playback
 				$"  Instrument: {packet.Instrument}\n"
 				);
 
-			FileTree.Node node = ClientFileManager.DataTree.Find(packet.File);
-			if (node == null)
+			IPlayer player = ClientAPI.World.AllOnlinePlayers[packet.ClientId];
+			ClientFileManager.RequestFile(player, packet.File, (node, context) =>
 			{
-				IPlayer player = ClientAPI.World.AllOnlinePlayers[packet.ClientId];
-				ClientFileManager.RequestFile(player, packet.File, (node, context) =>
-				{
-					// TODO@exocs:
-					//   Play the file or seek to the playback.
-				});
-			}
+				// TODO@exocs:
+				//   Play the file or seek to the playback.
+			});
 		}
 		//
 		// Summary:
