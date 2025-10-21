@@ -1,5 +1,7 @@
 ﻿using System;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.MathTools;
 using Midi;
 using MidiParser;
 using Instruments.Types;
@@ -9,7 +11,7 @@ namespace Instruments.Players
 	//
 	// Summary:
 	//     Base class for players that allow processing and playing back parsed MIDI files.
-	public abstract class MusicPlayerMidi : IDisposable
+	public abstract class MidiPlayerBase : IDisposable
 	{
 		//
 		// Summary:
@@ -19,25 +21,49 @@ namespace Instruments.Players
 		// Summary:
 		//     The instrument type associated with this player.
 		protected InstrumentType InstrumentType { get; private set; }
-
+		//
+		// Summary:
+		//     The active and parsed track to be played by this player.
 		private MidiTrack _midiTrack;
-
+		//
+		// Summary:
+		//     The beats per minute of the active track.
 		private int _beatsPerMinute;
+		//
+		// Summary:
+		//     The ticks per quarter note of the active track, as specified in the MIDI.
 		private int _ticksPerQuarterNote;
+		//
+		// Summary:
+		//     The duration of the active track in ticks.
 		private int _ticksDuration;
-
 		//
 		// Summary:
 		//     Elapsed time since start in seconds.
 		private double _elapsedTime;
 		//
 		// Summary:
-		//     Duration of active track in seconds.
+		//     The duration of active track in seconds.
 		private double _duration;
-
+		//
+		// Summary:
+		//     The index of the last MIDI event polled.
 		private int _eventIndex;
+		//
+		// Summary:
+		//     The selected channel (track) index.
 		private int _channel;
-
+		//
+		// Summary:
+		//     Creates new MIDI player.
+		// Parameters:
+		//   api: The API interface to the game world.
+		//   instrumentType: The instrument type this player should use.
+		public MidiPlayerBase(ICoreAPI api, InstrumentType instrumentType)
+		{
+			CoreAPI = api;
+			InstrumentType = instrumentType;
+		}
 		//
 		// Summary:
 		//     Returns the duration of the played track in seconds.
@@ -198,7 +224,7 @@ namespace Instruments.Players
 				switch (midiEvent.MidiEventType)
 				{
 					case MidiEventType.NoteOff:
-						OnNoteOff((Pitch)midiEvent.Note, Constants.Midi.NormalizeVelocity((byte)midiEvent.Velocity),  channel, time);
+						OnNoteOff((Pitch)midiEvent.Note, Constants.Midi.NormalizeVelocity((byte)midiEvent.Velocity), channel, time);
 						break;
 
 					case MidiEventType.NoteOn:
@@ -219,6 +245,10 @@ namespace Instruments.Players
 						break;
 				}
 			}
+
+			// Fetch new source position and update all sounds:
+			Vec3f sourcePosition = GetSourcePosition();
+			SetPosition(sourcePosition);
 		}
 		//
 		// Summary:
@@ -302,15 +332,38 @@ namespace Instruments.Players
 		protected virtual void OnStop() { }
 		//
 		// Summary:
-		//     Creates new MIDI player.
-		// Parameters:
-		//   api: The API interface to the game world.
-		//   instrumentType: The instrument type this player should use.
-		public MusicPlayerMidi(ICoreAPI api, InstrumentType instrumentType)
+		//     Request sound params for the provided pitch played with specified properties.
+		// Returns:
+		//     SoundParams instance or null if there is no sound to be played for the specified configuration.
+		protected SoundParams CreateSoundParams(Pitch pitch, float velocity, int channel, float time, InstrumentType instrumentType)
 		{
-			CoreAPI = api;
-			InstrumentType = instrumentType;
+			if (IsSourceValid() && instrumentType.GetPitchSound(pitch, out string assetPath, out float soundPitch))
+			{
+				SoundParams soundParams = new SoundParams(new AssetLocation("instruments", assetPath));
+				soundParams.Volume = Constants.Playback.GetVolumeFromVelocity(velocity);
+				soundParams.DisposeOnFinish = true;
+				soundParams.RelativePosition = false;
+				soundParams.Position = GetSourcePosition();
+				soundParams.Pitch = soundPitch;
+				return soundParams;
+			}
+
+			return null;
 		}
+		//
+		// Summary:
+		//     Returns whether the source is valid. With invalid source the playback will not occur.
+		protected abstract bool IsSourceValid();
+		//
+		// Summary:
+		//     Returns the source position or in other words the position from which sounds should originate.
+		protected abstract Vec3f GetSourcePosition();
+		//
+		// Summary:
+		//     Callback raised when the playback is updated.
+		// Parameters:
+		//   sourcePosition: The sound source position in world space.
+		protected abstract void SetPosition(Vec3f sourcePosition);
 		//
 		// Summary:
 		//     Dispose of this player and all of its allocated resources and sounds.

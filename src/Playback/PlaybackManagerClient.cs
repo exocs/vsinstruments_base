@@ -26,7 +26,7 @@ namespace Instruments.Playback
 		//
 		// Summary:
 		//     Music players per player.
-		protected Dictionary<int, MusicPlayerMidi> ClientPlayers { get; private set; }
+		protected Dictionary<int, MidiPlayerBase> ClientPlayers { get; private set; }
 		//
 		// Summary:
 		//     Creates new client side playback manager.
@@ -43,7 +43,7 @@ namespace Instruments.Playback
 				.SetMessageHandler<StartPlaybackOwner>(OnStartPlaybackOwner);
 
 			ClientFileManager = fileManager;
-			ClientPlayers = new Dictionary<int, MusicPlayerMidi>(64);
+			ClientPlayers = new Dictionary<int, MidiPlayerBase>(64);
 		}
 		//
 		// Summary:
@@ -88,7 +88,7 @@ namespace Instruments.Playback
 		protected void CreateMusicPlayer(IPlayer player, FileTree.Node node, int channel, InstrumentType instrumentType, long startTimeMsec = 0)
 		{
 			int clientId = player.ClientId;
-			if (ClientPlayers.Remove(clientId, out MusicPlayerMidi previousPlayer))
+			if (ClientPlayers.Remove(clientId, out MidiPlayerBase previousPlayer))
 			{
 				if (previousPlayer.IsPlaying)
 					previousPlayer.Stop();
@@ -99,7 +99,7 @@ namespace Instruments.Playback
 			try
 			{
 				MidiParser.MidiFile midi = new MidiParser.MidiFile(node.FullPath);
-				MusicPlayerMidi musicPlayer = new PlayerMusicPlayerMidi(ClientAPI, player, instrumentType);
+				MidiPlayerBase musicPlayer = new MidiPlayer(ClientAPI, player, instrumentType);
 				musicPlayer.Play(midi, channel);
 
 				double time = (ClientAPI.World.ElapsedMilliseconds - startTimeMsec) / 1000.0;
@@ -120,7 +120,7 @@ namespace Instruments.Playback
 		{
 			// TODO@exocs: Not very efficient.
 			var musicPlayers = ClientPlayers.Values;
-			foreach (MusicPlayerMidi player in musicPlayers)
+			foreach (MidiPlayerBase player in musicPlayers)
 			{
 				if (player.IsPlaying) player.Update(deltaTime);
 			}

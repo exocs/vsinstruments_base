@@ -60,7 +60,7 @@ namespace Instruments.GUI
 		//
 		// Summary:
 		//     The music player responsible for playing local preview.
-		private MusicPlayerMidi _previewMusicPlayer;
+		private MidiPlayerBase _previewMusicPlayer;
 		//
 		// Summary:
 		//     The instrument type the songs should be played with (if any).
@@ -169,7 +169,7 @@ namespace Instruments.GUI
 
 			_treeNodes = new List<FileTree.Node>();
 			_contentNodes = new List<FileTree.Node>();
-			_previewMusicPlayer = new PreviewPlayerMidi(capi, instrumentType); // If no instrument is provided, try to use anything.
+			_previewMusicPlayer = new MidiPlayer(capi, capi.World.Player, instrumentType); // If no instrument is provided, try to use anything.
 			_instrumentType = instrumentType;
 
 			bandNameChange = bandChange;
@@ -733,10 +733,6 @@ namespace Instruments.GUI
 				return components.ToArray();
 			}
 
-			addComponent(			"Format:",		$"{midiInfo.FormatText}");
-			addComponent(			"BPM:",			$"{midiInfo.BPM}");
-			addComponent(			"Duration:",	$"{durationToString(midiInfo.Duration)}");
-			addComponent(			"Tracks:",		$"{midiInfo.TracksCount}");
 
 			// Now that the global properties are added populated, start adding individual
 			// information for each track available in the file.
@@ -749,13 +745,10 @@ namespace Instruments.GUI
 				addSingleComponent(	$"Track #{trackInfo.Index:00}:");
 				addComponent(		"Duration:",	$"{durationToString(trackInfo.Duration)}");
 				addComponent(		"Notes:",		$"{trackInfo.NoteCount}");
-				
 				// There is nothing more to add if the track has no notes.
 				if (trackInfo.NoteCount == 0)
 					continue;
 
-				addComponent(		$"First Note:", $"{durationToString(trackInfo.FirstNoteTime.Value)}");
-				addComponent(		"Instrument:",	$"{trackInfo.InstrumentText}");
 				addPlaybackComponent(midiInfo.GetMidiFile(), trackInfo.Index);
 			}
 
