@@ -1,13 +1,17 @@
 ﻿using ProtoBuf;
 
-namespace Instruments.Network.Packets
+namespace Instruments.Network.Playback
 {
 	//
 	// Summary:
-	//     Packet sent to the server from clients to request playback.
+	//     Packet broadcast to clients from the server informing them about a playback start.
 	[ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-	public class StartPlaybackRequest
+	public class StartPlaybackBroadcast
 	{
+		//
+		// Summary:
+		//     Id of the player that started the playback.
+		public int ClientId;
 		//
 		// Summary:
 		//     Relative path to the file to be played.

@@ -8,6 +8,7 @@ using Midi;
 using Instruments.GUI;
 using Instruments.Network.Packets;
 using Instruments.Types;
+using Instruments.Core;
 
 namespace Instruments.Items
 {
@@ -85,6 +86,12 @@ namespace Instruments.Items
 					return;
 				}
 
+				bool isPlaying = capi.GetInstrumentMod().PlaybackManager.IsPlaying(client.Player.ClientId);
+				if (isPlaying)
+				{
+					capi.GetInstrumentMod().PlaybackManager.RequestStopPlayback();
+				}
+
 				if (GetPlayMode(slot) != PlayMode.abc)
 				{
 					Vec3d pos = new Vec3d(byEntity.Pos.X, byEntity.Pos.Y, byEntity.Pos.Z);
@@ -97,9 +104,9 @@ namespace Instruments.Items
 				}
 				else
 				{
-					if (Definitions.Instance.IsPlaying())
+					if (isPlaying)
 					{
-						ABCSendStop();
+						//ABCSendStop();
 					}
 					else
 					{

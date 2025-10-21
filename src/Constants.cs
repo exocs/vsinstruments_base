@@ -140,6 +140,12 @@ namespace Instruments
 			{
 				return Single.Lerp(FadeOutDuration, MinFadeOutDuration, velocity01);
 			}
+
+			//
+			// Summary:
+			//     Determines the tick rate at which the playback manager should update, in milliseconds.
+			//     Default value is approximately equal to 30 Hz.
+			public const int ManagerTickInterval = (int)((1.0 / 30.0) * 1000.0);
 		}
 	}
 }

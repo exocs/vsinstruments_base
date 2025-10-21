@@ -9,7 +9,7 @@ using Instruments.Playback;
 
 namespace Instruments.Core
 {
-    public class InstrumentModServer : InstrumentModCommon
+    public class InstrumentModServer : InstrumentModBase
     {
         public override bool ShouldLoad(EnumAppSide side)
         {
@@ -31,8 +31,14 @@ namespace Instruments.Core
             public int index;
         }
 
+		//
+		// Summary:
+		//     The object responsible for managing files on the server.
 		private FileManagerServer _fileManager;
-		public override FileManager FileManager
+		//
+		// Summary:
+		//     Returns the object responsible for managing files on the server.
+		public override FileManagerServer FileManager
 		{
 			get
 			{
@@ -40,7 +46,20 @@ namespace Instruments.Core
 			}
 		}
 
-        private PlaybackManagerServer _playbackManager;
+		//
+		// Summary:
+		//     The object responsible for managing music playback on the server.
+		private PlaybackManagerServer _playbackManager;
+		//
+		// Summary:
+		//     Returns the object responsible for managing music playback on the server.
+		public override PlaybackManagerServer PlaybackManager
+		{
+			get
+			{
+				return _playbackManager;
+			}
+		}
 
 		public override void StartServerSide(ICoreServerAPI api)
         {
@@ -182,4 +201,18 @@ namespace Instruments.Core
         }
         #endregion
     }
+
+	//
+	// Summary:
+	//     This class provides convenience extension wrappers for retrieving the mod system instance.
+	public static partial class InstrumentModExtensions
+	{
+		//
+		// Summary:
+		//     Convenience wrapper for retrieving the instruments mod instance.
+		public static InstrumentModServer GetInstrumentMod(this ICoreServerAPI serverAPI)
+		{
+			return GetInstrumentMod<InstrumentModServer>(serverAPI);
+		}
+	}
 }

@@ -11,7 +11,7 @@ using Instruments.Playback;
 
 namespace Instruments.Core
 {
-    public class InstrumentModClient : InstrumentModCommon
+    public class InstrumentModClient : InstrumentModBase
     {
         public override bool ShouldLoad(EnumAppSide side) // Enabling this will kill the sounds, cos the sounds are made server side smh. Might need to separate the ui stuff with sounds.
         {
@@ -28,14 +28,19 @@ namespace Instruments.Core
         List<SoundManager> soundManagers;
         bool clientSideEnable;
         bool clientSideReady = false;
-        bool setupDone = false;
 
 
         long listenerIDClient = -1;
 
 
+		//
+		// Summary:
+		//     The object responsible for managing files on the client.
 		private FileManagerClient _fileManager;
-		public override FileManager FileManager
+		//
+		// Summary:
+		//     Returns the object responsible for managing files on the client.
+		public override FileManagerClient FileManager
 		{
 			get
 			{
@@ -44,7 +49,20 @@ namespace Instruments.Core
 			}
 		}
 
-        private PlaybackManagerClient _playbackManager;
+		//
+		// Summary:
+		//     The object responsible for managing music playback on the client.
+		private PlaybackManagerClient _playbackManager;
+		//
+		// Summary:
+		//     Returns the object responsible for managing music playback on the client.
+		public override PlaybackManagerClient PlaybackManager
+		{
+			get
+			{
+				return _playbackManager;
+			}
+		}
 
 		public override void StartClientSide(ICoreClientAPI api)
         {
@@ -85,8 +103,6 @@ namespace Instruments.Core
             clientSideEnable = true;
             clientSideReady = true;
 
-            clientApi.Event.RegisterGameTickListener(_playbackManager.Update, 10);
-
             //clientApi.ShowChatMessage("Cats!");
         }
 
@@ -106,8 +122,6 @@ namespace Instruments.Core
         private void MakeNote(NoteStart note)
         {
             if (!clientSideReady) return;
-            if (!setupDone)
-                FirstTimeSetup();
 
             string noteString = "/a3";
             if (note.instrument == "drum")
@@ -192,9 +206,6 @@ namespace Instruments.Core
                 return;
 
             if (!clientSideReady) return;
-
-            if (!setupDone)
-                FirstTimeSetup();
 
             SoundManager sm = soundManagers.Find(x => x.sourceID == serverPacket.fromClientID);
             if (sm == null)
@@ -316,24 +327,20 @@ namespace Instruments.Core
                     break;
             }
         }
-        private void FirstTimeSetup()
-        {
-            // Go through the list of all instruments (in Instrument.cs) and add a sound file location for each entry.
-            // Make sure the folder name is exactly the same as in the enum!
-            // Have to do this after everything else loads, because it likes to attempt it before when the IntrumentTypes dict is empty.
-            //foreach (KeyValuePair<string, string> instrumentType in Definitions.Instance.GetInstrumentTypes())
-            //{
-             //   string s = "sounds/" + instrumentType.Key;
-              //  soundLocations.Add(instrumentType.Key, s);
-            // }
-            setupDone = true;
-        }
+		#endregion
+	}
 
-        public void RequestStartPlayback(string filepath, int channel, InstrumentType instrumentType)
-        {
-            _playbackManager.RequestStartPlayback(filepath, channel, instrumentType);
+	//
+	// Summary:
+	//     This class provides convenience extension wrappers for retrieving the mod system instance.
+	public static partial class InstrumentModExtensions
+	{
+		//
+		// Summary:
+		//     Convenience wrapper for retrieving the instruments mod instance.
+		public static InstrumentModClient GetInstrumentMod(this ICoreClientAPI clientAPI)
+		{
+			return GetInstrumentMod<InstrumentModClient>(clientAPI);
 		}
-
-        #endregion
-    }
+	}
 }

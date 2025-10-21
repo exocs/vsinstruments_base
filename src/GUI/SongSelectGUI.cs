@@ -155,7 +155,7 @@ namespace Instruments.GUI
 			: base(capi)
 		{
 			// Retrieve the client file tree from the mod system.
-			_fileTree = capi.ModLoader.GetModSystem<InstrumentModClient>().FileManager.UserTree;
+			_fileTree = capi.GetInstrumentMod().FileManager.UserTree;
 
 			// TODO@exocs: Solve more pragmatically, for now this is good enough.
 			_fileTree.NodeChanged += (node) =>
@@ -691,12 +691,14 @@ namespace Instruments.GUI
 
 				components.Add(new LinkTextComponent(capi, "Play", rightFont, (txc) =>
 				{
+					// TODO@exocs: Move this out
 					// Play callback
-					capi.ModLoader.GetModSystem<InstrumentModClient>().RequestStartPlayback(
+					capi.GetInstrumentMod().PlaybackManager.RequestStartPlayback(
 						node.RelativePath,
 						trackIndex,
 						_instrumentType
 						);
+					TryClose();
 
 				}));
 				components.Add(new RichTextComponent(capi, Environment.NewLine, leftFont));

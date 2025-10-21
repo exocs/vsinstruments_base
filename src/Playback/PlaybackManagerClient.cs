@@ -1,16 +1,87 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Vintagestory.API.Client;
 using Vintagestory.API.Common;
-using Vintagestory.API.Client;
+using MidiParser;
 using Instruments.Files;
-using Instruments.Network.Packets;
-using Instruments.Types;
+using Instruments.Network.Playback;
 using Instruments.Players;
+using Instruments.Types;
 
 namespace Instruments.Playback
 {
 	public class PlaybackManagerClient : PlaybackManager
 	{
+		//
+		// Summary:
+		//     This class contains information about a single playback (and/or its state) for a given player, on the client.
+		protected class PlaybackStateClient : PlaybackStateBase
+		{
+			//
+			// Summary:
+			//     Interface to the game.
+			protected ICoreClientAPI ClientAPI { get; private set; }
+			//
+			// Summary:
+			//     Midi player for this player, if any is present.
+			protected MidiPlayerBase MidiPlayer { get; private set; }
+			//
+			// Summary:
+			//     Creates new server playback info for the provided player.
+			public PlaybackStateClient(ICoreClientAPI api, IClientPlayer player) : base(player)
+			{
+				ClientAPI = api;
+			}
+			//
+			// Summary:
+			//     Starts playback.
+			public void StartPlayback(MidiFile midi, InstrumentType instrumentType, int channel, double startTime)
+			{
+				MidiPlayer = new MidiPlayer(ClientAPI, Player, instrumentType);
+				MidiPlayer.Play(midi, channel);
+				MidiPlayer.TrySeek(startTime);
+			}
+			//
+			// Summary:
+			//     Starts playback.
+			public void StopPlayback()
+			{
+				if (MidiPlayer != null)
+				{
+					MidiPlayer.TryStop();
+					MidiPlayer.Dispose();
+					MidiPlayer = null;
+				}
+			}
+			//
+			// Summary:
+			//     Returns whether the player is actively playing.
+			public override bool IsPlaying
+			{
+				get
+				{
+					return MidiPlayer != null;
+				}
+			}
+			//
+			// Summary:
+			//     Returns whether the player is was playing, but is now finished.
+			public override bool IsFinished
+			{
+				get
+				{
+					return MidiPlayer != null && MidiPlayer.IsFinished;
+				}
+			}
+			//
+			// Summary:
+			//     Returns whether the player is actively playing.
+			public override void Update(float deltaTime)
+			{
+				if (!MidiPlayer.IsFinished)
+				{
+					MidiPlayer.Update(deltaTime);
+				}
+			}
+		}
 		//	 
 		// Summary:	 
 		//     Returns the interface to the game.
@@ -25,10 +96,6 @@ namespace Instruments.Playback
 		protected FileManagerClient ClientFileManager { get; private set; }
 		//
 		// Summary:
-		//     Music players per player.
-		protected Dictionary<int, MidiPlayerBase> ClientPlayers { get; private set; }
-		//
-		// Summary:
 		//     Creates new client side playback manager.
 		public PlaybackManagerClient(ICoreClientAPI api, FileManagerClient fileManager)
 			: base(api, fileManager)
@@ -38,23 +105,67 @@ namespace Instruments.Playback
 				.RegisterMessageType<StartPlaybackRequest>()
 				.RegisterMessageType<StartPlaybackBroadcast>()
 				.RegisterMessageType<StartPlaybackOwner>()
+				.RegisterMessageType<StartPlaybackDenyOwner>()
+				.RegisterMessageType<StopPlaybackRequest>()
+				.RegisterMessageType<StopPlaybackBroadcast>()
 
 				.SetMessageHandler<StartPlaybackBroadcast>(OnStartPlaybackBroadcast)
-				.SetMessageHandler<StartPlaybackOwner>(OnStartPlaybackOwner);
+				.SetMessageHandler<StartPlaybackOwner>(OnStartPlaybackOwner)
+				.SetMessageHandler<StartPlaybackDenyOwner>(OnStartPlaybackDenyOwner)
+				.SetMessageHandler<StopPlaybackBroadcast>(OnStopPlaybackBroadcast);
 
 			ClientFileManager = fileManager;
-			ClientPlayers = new Dictionary<int, MidiPlayerBase>(64);
+
+			// Create a container for the status of playback as known on the server for the joining player,
+			ClientAPI.Event.PlayerJoin += (IClientPlayer player) =>
+			{
+				PlaybackStateClient state = new PlaybackStateClient(api, player);
+				AddPlaybackState(state);
+			};
+
+			// Additionally create a state for every client that was already connected:
+			foreach (IPlayer player in ClientAPI.World.AllOnlinePlayers)
+			{
+				if (!HasPlaybackState(player.ClientId))
+				{
+					PlaybackStateClient state = new PlaybackStateClient(api, player as IClientPlayer);
+					AddPlaybackState(state);
+				}
+			}
+
+			// And dispose of it, making sure to terminate any outgoing playback for players that are leaving.
+			ClientAPI.Event.PlayerLeave += (IClientPlayer player) =>
+			{
+				if (RemovePlaybackState(player.ClientId, out PlaybackStateClient state))
+				{
+					// TODO@exocs: Stop the playback!
+				}
+			};
+
+			// Register the tick event for the playback updates.
+			ClientAPI.Event.RegisterGameTickListener(Update, Constants.Playback.ManagerTickInterval);
 		}
 		//
 		// Summary:
 		//     Asks the server to start the playback with provided data.
 		public void RequestStartPlayback(string file, int channel, InstrumentType instrumentType)
 		{
-			StartPlaybackRequest request = new StartPlaybackRequest();
-			request.File = file;
-			request.Channel = channel;
-			request.Instrument = instrumentType.ID;
-			ClientChannel.SendPacket(request);
+			// TODO@exocs:
+			//   Drop the request locally, if we are playing already.
+
+			StartPlaybackRequest startRequest = new StartPlaybackRequest();
+			startRequest.File = file;
+			startRequest.Channel = channel;
+			startRequest.Instrument = instrumentType.ID;
+			ClientChannel.SendPacket(startRequest);
+		}
+		//
+		// Summary:
+		//     Asks the server to stop the current playback.
+		public void RequestStopPlayback()
+		{
+			StopPlaybackRequest stopRequest = new StopPlaybackRequest();
+			ClientChannel.SendPacket(stopRequest);
 		}
 		//
 		// Summary:
@@ -62,14 +173,28 @@ namespace Instruments.Playback
 		//     This callback is called for all players except the actual instigator (the instrument player).
 		protected void OnStartPlaybackBroadcast(StartPlaybackBroadcast packet)
 		{
+			// Store the time at which the start occured, as the request may take some time
+			// and the client will need to seek the player to the offset from now.
 			long elapsedMilliseconds = ClientAPI.World.ElapsedMilliseconds;
-			IPlayer player = ClientAPI.World.AllOnlinePlayers[packet.ClientId];
-			ClientFileManager.RequestFile(player, packet.File, (node, context) =>
+
+			// Retrieve the state for the player that instigated the playback, before
+			// processing with the file request.
+			PlaybackStateClient state = GetPlaybackState(packet.ClientId) as PlaybackStateClient;
+
+			ClientFileManager.RequestFile(state.Player, packet.File, (node, context) =>
 			{
-				long startTimeMsec = (long)context;
-				CreateMusicPlayer(player, node, packet.Channel, InstrumentType.Find(packet.Instrument), startTimeMsec);
+				double delaySec = (ClientAPI.World.ElapsedMilliseconds - (long)context) / 1000.0f;
+				StartPlayback(state.Player.ClientId, node, packet.Channel, packet.Instrument, delaySec);
 
 			}, elapsedMilliseconds);
+		}
+		//
+		// Summary:
+		//     Callback raised when playback ends.
+		//     This callback is called for all players except the actual instigator (the instrument player).
+		protected void OnStopPlaybackBroadcast(StopPlaybackBroadcast packet)
+		{
+			StopPlayback(packet.ClientId);
 		}
 		//
 		// Summary:
@@ -77,40 +202,56 @@ namespace Instruments.Playback
 		//     This callback is called for the actual instigator only.
 		protected void OnStartPlaybackOwner(StartPlaybackOwner packet)
 		{
-			// TODO@exocs: Play the file!
 			FileTree.Node node = ClientFileManager.UserTree.Find(packet.File);
-			CreateMusicPlayer(ClientAPI.World.Player, node, packet.Channel, InstrumentType.Find(packet.Instrument), ClientAPI.World.ElapsedMilliseconds);
+			StartPlayback(ClientAPI.World.Player.ClientId, node, packet.Channel, packet.Instrument, 0);
+			ShowPlaybackNotification($"Playing {System.IO.Path.GetFileNameWithoutExtension(packet.File)}.");
 		}
 		//
 		// Summary:
-		//     Creates music player for the provided player.
-		//     If a player was present previously, it is replaced.
-		protected void CreateMusicPlayer(IPlayer player, FileTree.Node node, int channel, InstrumentType instrumentType, long startTimeMsec = 0)
+		//     Callback raised when a playback request is denied.
+		//     This callback is called for the actual instigator only.
+		protected void OnStartPlaybackDenyOwner(StartPlaybackDenyOwner packet)
 		{
-			int clientId = player.ClientId;
-			if (ClientPlayers.Remove(clientId, out MidiPlayerBase previousPlayer))
-			{
-				if (previousPlayer.IsPlaying)
-					previousPlayer.Stop();
-
-				previousPlayer.Dispose();
-			}
-
+			ShowPlaybackErrorMessage(packet.ReasonText);
+		}
+		//
+		// Summary:
+		//     Starts the actual playback for the provided client, locally.
+		// Parameters:
+		//   clientId: Unique identifier of the client that started playing.
+		//   node: The file node pointing to the file that should be played.
+		//   channel: The index of the midi track to play back.
+		//   instrumentTypeId: Unique identifier of the instrument type to play with.
+		//   startTimeSec: Time in seconds that should be skipped in the playback.
+		protected void StartPlayback(int clientId, FileTree.Node node, int channel, int instrumentTypeId, double startTimeSec = 0)
+		{
 			try
 			{
-				MidiParser.MidiFile midi = new MidiParser.MidiFile(node.FullPath);
-				MidiPlayerBase musicPlayer = new MidiPlayer(ClientAPI, player, instrumentType);
-				musicPlayer.Play(midi, channel);
+				PlaybackStateClient state = GetPlaybackState(clientId) as PlaybackStateClient;
 
-				double time = (ClientAPI.World.ElapsedMilliseconds - startTimeMsec) / 1000.0;
-				double duration = musicPlayer.Duration;
-				musicPlayer.Seek(Math.Min(time, duration));
+				MidiFile midi = new MidiFile(node.FullPath);
+				InstrumentType instrumentType = InstrumentType.Find(instrumentTypeId);
 
-				ClientPlayers.Add(clientId, musicPlayer);
+				state.StartPlayback(midi, instrumentType, channel, startTimeSec);
 			}
 			catch
 			{
-				// Bad.
+				ShowPlaybackErrorMessage("An internal error occured.");
+			}
+		}
+		//
+		// Summary:
+		//     Stops the actual playback for the provided client, locally.
+		protected void StopPlayback(int clientId)
+		{
+			PlaybackStateClient state = GetPlaybackState(clientId) as PlaybackStateClient;
+			state.StopPlayback();
+
+			// TODO@exocs: For now stopping is handled as a broadcast, if there is additional information needed
+			// for the owner/instigator specifically, this can be changed.
+			if (clientId == ClientAPI.World.Player.ClientId)
+			{
+				ShowPlaybackNotification("Playback stopped on user request.");
 			}
 		}
 		//
@@ -118,12 +259,33 @@ namespace Instruments.Playback
 		//     Updates this managed and all its music players.
 		public override void Update(float deltaTime)
 		{
-			// TODO@exocs: Not very efficient.
-			var musicPlayers = ClientPlayers.Values;
-			foreach (MidiPlayerBase player in musicPlayers)
+			var states = PlaybackStates.Values;
+			foreach (PlaybackStateBase state in states)
 			{
-				if (player.IsPlaying) player.Update(deltaTime);
+				if (!state.IsPlaying)
+					continue;
+
+				state.Update(deltaTime);
+
+				if (state.IsFinished)
+				{
+					StopPlayback(state.ClientId);
+				}
 			}
+		}
+		//
+		// Summary:
+		//     Notifies the client with a playback message.
+		protected void ShowPlaybackErrorMessage(string reason)
+		{
+			ClientAPI.ShowChatMessage($"Instruments playback failed: {reason}");
+		}
+		//
+		// Summary:
+		//     Notifies the client with a playback message.
+		protected void ShowPlaybackNotification(string message)
+		{
+			ClientAPI.ShowChatMessage($"Instruments: {message}");
 		}
 	}
 }

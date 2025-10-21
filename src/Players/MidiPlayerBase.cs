@@ -285,6 +285,26 @@ namespace Instruments.Players
 		}
 		//
 		// Summary:
+		//     Seeks to the position, limited by the player bounds, within the player without playing
+		//     any notes and only if Seek can be performed.
+		//
+		// Parameters:
+		//   time: Time in seconds to seek to.
+		// Returns:
+		//     Whether the operation was successfull.
+		public bool TrySeek(double time)
+		{
+			if (!IsPlaying)
+			{
+				return false;
+			}
+
+			double clampedTime = Math.Min(Math.Max(time, 0), Duration);
+			Seek(clampedTime);
+			return true;
+		}
+		//
+		// Summary:
 		//     Stops the playback.
 		//     The player must be playing or finished in order for it to be able to stop!
 		public void Stop()
@@ -307,6 +327,20 @@ namespace Instruments.Players
 			_channel = 0;
 
 			OnStop();
+		}
+		//
+		// Summary:
+		//     Stops the playback, only if the playback is active.
+		// Returns:
+		//     Whether the stop action was successfull.
+		public bool TryStop()
+		{
+			if (IsPlaying)
+			{
+				Stop();
+				return true;
+			}
+			return false;
 		}
 		//
 		// Summary:

@@ -1,12 +1,12 @@
 ﻿using ProtoBuf;
 
-namespace Instruments.Network.Packets
+namespace Instruments.Network.Playback
 {
 	//
 	// Summary:
-	//     Packet broadcast to the instigator of the playback.
+	//     Request packet sent to the server from clients to start new playback.
 	[ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-	public class StartPlaybackOwner
+	public class StartPlaybackRequest
 	{
 		//
 		// Summary:
