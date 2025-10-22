@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using Vintagestory.API.Client;
 using Vintagestory.GameContent;
@@ -674,6 +675,107 @@ namespace Instruments.Files
 		}
 		//
 		// Summary:
+		//     Interface for all queued file tree events.
+		protected interface IQueuedEvent
+		{
+			public void Invoke(FileTree owner);
+		}
+		//
+		// Summary:
+		//     Queued event for node renames.
+		protected struct RenamedEvent : IQueuedEvent
+		{
+			private Node _node;
+			private string _oldName;
+			private string _newName;
+			public RenamedEvent(Node node, string oldName, string newName)
+			{
+				_node = node;
+				_oldName = oldName;
+				_newName = newName;
+			}
+			public void Invoke(FileTree owner)
+			{
+				owner.NodeRenamed?.Invoke(_node, _oldName, _newName);
+			}
+		}
+		//
+		// Summary:
+		//     Queued event for node changes.
+		protected struct ChangedEvent : IQueuedEvent
+		{
+			private Node _node;
+			public ChangedEvent(Node node)
+			{
+				_node = node;
+			}
+			public void Invoke(FileTree owner)
+			{
+				owner.NodeChanged?.Invoke(_node);
+			}
+		}
+		//
+		// Summary:
+		//     Queued event for node creations.
+		protected struct CreatedEvent : IQueuedEvent
+		{
+			private Node _node;
+			public CreatedEvent(Node node)
+			{
+				_node = node;
+			}
+			public void Invoke(FileTree owner)
+			{
+				owner.NodeCreated?.Invoke(_node);
+			}
+		}
+		//
+		// Summary:
+		//     Queued event for node deletions.
+		protected struct DeletedEvent : IQueuedEvent
+		{
+			private Node _node;
+			public DeletedEvent(Node node)
+			{
+				_node = node;
+			}
+			public void Invoke(FileTree owner)
+			{
+				owner.NodeDeleted?.Invoke(_node);
+			}
+		}
+		//
+		// Summary:
+		//     Queue of pending events to be raised during next update.
+		protected ConcurrentQueue<IQueuedEvent> _eventQueue = new ConcurrentQueue<IQueuedEvent>();
+		//
+		// Summary:
+		//     Enqueue new event.
+		protected void PushEvent(IQueuedEvent queuedEvent)
+		{
+			lock (_eventQueue)
+			{
+				_eventQueue.Enqueue(queuedEvent);
+			}
+		}
+		//
+		// Summary:
+		//     Invokes all pending enqueued events.
+		protected void PopEvents()
+		{
+			lock (_eventQueue)
+			{
+				while (_eventQueue.Count > 0 && _eventQueue.TryDequeue(out IQueuedEvent queuedEvent))
+				{
+					queuedEvent.Invoke(this);
+				}
+
+			}
+		}
+		//
+		// Summary:
+		//
+		// Summary:
 		//     Callback raised when the watcher detects an entry was renamed.
 		private void OnWatcherRenamedEvent(object sender, RenamedEventArgs args)
 		{
@@ -684,7 +786,10 @@ namespace Instruments.Files
 				string oldName = node.Name;
 
 				node.Rename(newName);
-				NodeRenamed?.Invoke(node, oldName, newName);
+
+				// Do not fire event directly as it may be called from a different
+				// than the calling thread, enqueue it instead.
+				PushEvent(new RenamedEvent(node, oldName, newName));
 
 				if (node.Parent != null)
 				{
@@ -710,7 +815,9 @@ namespace Instruments.Files
 				parent.AddChild(node);
 				BuildBranches(node);
 
-				NodeCreated?.Invoke(node);
+				// Do not fire event directly as it may be called from a different
+				// than the calling thread, enqueue it instead.
+				PushEvent(new CreatedEvent(node));
 				return;
 			}
 		}
@@ -731,7 +838,9 @@ namespace Instruments.Files
 			Node node = Find(args.FullPath);
 			if (node != null)
 			{
-				NodeChanged?.Invoke(node);
+				// Do not fire event directly as it may be called from a different
+				// than the calling thread, enqueue it instead.
+				PushEvent(new ChangedEvent(node));
 			}
 		}
 		//
@@ -742,7 +851,9 @@ namespace Instruments.Files
 			Node node = Find(args.FullPath);
 			if (node != null && node.Parent != null)
 			{
-				NodeDeleted?.Invoke(node);
+				// Do not fire event directly as it may be called from a different
+				// than the calling thread, enqueue it instead.
+				PushEvent(new DeletedEvent(node));
 				node.Parent.RemoveChild(node);
 			}
 		}
@@ -767,8 +878,13 @@ namespace Instruments.Files
 					&& Path.Exists(_rootNode.FullPath);
 			}
 		}
-
+		//
+		// Summary:
+		//     Delegate for method callbacks of changing a node.
 		public delegate void NodeChange(Node node);
+		//
+		// Summary:
+		//     Delegate for method callbacks of renaming a node.
 		public delegate void NodeRename(Node node, string oldName, string newName);
 		//
 		// Summary:
@@ -863,6 +979,15 @@ namespace Instruments.Files
 			{
 				DeleteNode(_rootNode);
 			}
+		}
+		//
+		// Summary:
+		//     Periodically update the state of this tree.
+		//     This function should be called from the main thread; file watcher events are called from a 
+		//     different thread. They are queued and raised during an update instead.
+		public void Update(float deltaTime)
+		{
+			PopEvents();
 		}
 	}
 }

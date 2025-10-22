@@ -47,18 +47,6 @@ namespace Instruments.GUI
 		private string _textFilter;
 		//
 		// Summary:
-		//     Flag that is set when this tree has changed.
-		private bool _hasChanged;
-		//
-		// Summary:
-		//     The node that has changed.
-		private FileTree.Node _changedNode;
-		//
-		// Summary:
-		//     Object used for locking this context when accessed from other threads.
-		private object _hasChangedLock = new object();
-		//
-		// Summary:
 		//     The music player responsible for playing local preview.
 		private MidiPlayerBase _previewMusicPlayer;
 		//
@@ -157,15 +145,7 @@ namespace Instruments.GUI
 			// Retrieve the client file tree from the mod system.
 			_fileTree = capi.GetInstrumentMod().FileManager.UserTree;
 
-			// TODO@exocs: Solve more pragmatically, for now this is good enough.
-			_fileTree.NodeChanged += (node) =>
-			{
-				lock (_hasChangedLock)
-				{
-					_hasChanged = true;
-					_changedNode = node;
-				}
-			};
+			_fileTree.NodeChanged += OnNodeChanged;
 
 			_treeNodes = new List<FileTree.Node>();
 			_contentNodes = new List<FileTree.Node>();
@@ -175,6 +155,20 @@ namespace Instruments.GUI
 			bandNameChange = bandChange;
 			SetupDialog(title, bandName);
 			SetupSelection();
+		}
+		//
+		// Summary:
+		//     Callback for node changes that updates the state of the GUI.
+		protected void OnNodeChanged(FileTree.Node node)
+		{
+			if (node != null && node.Context is MidiFileInfo)
+			{
+				// Make sure to overwrite the previous file info, as the viewer
+				// will never re-create it on demand. It will only reuse the existing
+				// or create a brand new info for nodes that don't have any yet.
+				node.Context = new MidiFileInfo(node.FullPath);
+			}
+			RefreshContent(true, true, true);
 		}
 		//
 		// Summary:
@@ -234,7 +228,12 @@ namespace Instruments.GUI
 			{
 				if (_previewMusicPlayer.IsPlaying || _previewMusicPlayer.IsFinished)
 					_previewMusicPlayer.Stop();
+
+				_previewMusicPlayer.Dispose();
+				_previewMusicPlayer = null;
 			}
+
+			_fileTree.NodeChanged -= OnNodeChanged;
 
 			base.OnGuiClosed();
 		}
@@ -816,28 +815,6 @@ namespace Instruments.GUI
 		//     Polls for periodic changes.
 		public override void OnBeforeRenderFrame3D(float deltaTime)
 		{
-			// Poll for changes from the file tree and update the content if necessary.
-			// Additionally refresh the midi file info for this node, if it exists.
-			lock (_hasChangedLock)
-			{
-				if (_hasChanged)
-				{
-					_hasChanged = false;
-					FileTree.Node changedNode = _changedNode;
-
-					if (changedNode != null && changedNode.Context is MidiFileInfo)
-					{
-						// Make sure to overwrite the previous file info, as the viewer
-						// will never re-create it on demand. It will only reuse the existing
-						// or create a brand new info for nodes that don't have any yet.
-						changedNode.Context = new MidiFileInfo(changedNode.FullPath);
-					}
-
-					_changedNode = null;
-					RefreshContent(true, true, true);
-				}
-			}
-
 			// Update the playback of the preview player, if there is any.
 			// This is also responsible for finishing the playback and
 			//  resetting its playback state, if applicable.

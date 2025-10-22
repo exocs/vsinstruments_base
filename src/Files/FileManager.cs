@@ -223,6 +223,16 @@ namespace Instruments.Files
 			UserTree = new FileTree(userPath);
 			DataTree = new FileTree(dataPath);
 			Requests = new Dictionary<int, FileRequest>(32);
+
+			api.Event.RegisterGameTickListener(Update, Constants.Files.ManagerTickInterval);
+		}
+		//
+		// Summary:
+		//     Periodic update called to poll and propagate file tree changes.
+		protected virtual void Update(float deltaTime)
+		{
+			UserTree.Update(deltaTime);
+			DataTree.Update(deltaTime);
 		}
 		//
 		// Summary:

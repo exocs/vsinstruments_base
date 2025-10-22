@@ -147,5 +147,15 @@ namespace Instruments
 			//     Default value is approximately equal to 30 Hz.
 			public const int ManagerTickInterval = (int)((1.0 / 30.0) * 1000.0);
 		}
+		//
+		// Summary:
+		//     This structure contains constants related to music players and their playback.
+		public struct Files
+		{
+			//
+			// Summary:
+			//     Determines the tick rate at which the file manager should update, in milliseconds.
+			public const int ManagerTickInterval = 10;
+		}
 	}
 }
