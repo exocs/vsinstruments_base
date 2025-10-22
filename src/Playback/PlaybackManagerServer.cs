@@ -132,6 +132,16 @@ namespace Instruments.Playback
 			{
 				PlaybackStateServer state = new PlaybackStateServer(api, player);
 				AddPlaybackState(state);
+
+				// Whenever a player modifies their hotbar, terminate their playback if they were active.
+				IInventory playerHotbar = player.InventoryManager.GetHotbarInventory();
+				playerHotbar.SlotModified += (int slotID) =>
+				{
+					if (IsPlaying(player.ClientId))
+					{
+						StopPlayback(player.ClientId, StopPlaybackReason.Terminated);
+					}
+				};
 			};
 			
 			// And dispose of it, making sure to terminate any outgoing playback for players that are leaving.
@@ -145,8 +155,16 @@ namespace Instruments.Playback
 				}
 			};
 
-			// Whenever a user that is actively playing back changes their active slot, make sure to terminate any
-			// ongoing playback and notify other clients as these may not be aware of the fact.
+			// Whenever a player dies, terminate their playback if they were active.
+			ServerAPI.Event.PlayerDeath += (IServerPlayer player, DamageSource damage) =>
+			{
+				if (IsPlaying(player.ClientId))
+				{
+					StopPlayback(player.ClientId, StopPlaybackReason.Terminated);
+				}
+			};
+
+			// Whenever a player changes their active hotbar slot, terminate their playback if they were active.
 			ServerAPI.Event.AfterActiveSlotChanged += (IServerPlayer player, ActiveSlotChangeEventArgs args) =>
 			{
 				if (IsPlaying(player.ClientId))

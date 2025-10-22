@@ -38,7 +38,7 @@
 		Cancelled,
 		//
 		// Summary:
-		//     Playback was abruptly terminated by the user (e.g. items changed).
+		//     Playback was abruptly terminated by the user - for instance the instrument was dropped or moved from the hotbar.
 		Terminated,
 		//
 		// Summary:
