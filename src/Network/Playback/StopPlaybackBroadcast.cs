@@ -12,5 +12,9 @@ namespace Instruments.Network.Playback
 		// Summary:
 		//     Id of the player of which the playback is about to stop.
 		public int ClientId;
+		//
+		// Summary:
+		//     Determines the reason for why the playback was stopped.
+		public StopPlaybackReason Reason;
 	}
 }

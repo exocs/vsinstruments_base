@@ -1,4 +1,6 @@
-﻿using Vintagestory.API.Server;
+﻿using System.Diagnostics;
+using Vintagestory.API.Server;
+using Vintagestory.API.Common;
 using MidiParser;
 using Instruments.Files;
 using Instruments.Network.Playback;
@@ -143,6 +145,16 @@ namespace Instruments.Playback
 				}
 			};
 
+			// Whenever a user that is actively playing back changes their active slot, make sure to terminate any
+			// ongoing playback and notify other clients as these may not be aware of the fact.
+			ServerAPI.Event.AfterActiveSlotChanged += (IServerPlayer player, ActiveSlotChangeEventArgs args) =>
+			{
+				if (IsPlaying(player.ClientId))
+				{
+					StopPlayback(player.ClientId, StopPlaybackReason.Terminated);
+				}
+			};
+
 			// Register the tick event for the playback updates.
 			ServerAPI.Event.RegisterGameTickListener(Update, Constants.Playback.ManagerTickInterval);
 		}
@@ -183,7 +195,7 @@ namespace Instruments.Playback
 			if (elapsedTime < ThrottleRequestsRate) // TODO@exocs: Constant
 			{
 				StartPlaybackDenyOwner tooManyRequests = new StartPlaybackDenyOwner();
-				tooManyRequests.Reason = StartPlaybackDenyOwner.DenyReason.TooManyRequests;
+				tooManyRequests.Reason = DenyPlaybackReason.TooManyRequests;
 				ServerChannel.SendPacket(tooManyRequests, source);
 				return;
 			}
@@ -197,7 +209,7 @@ namespace Instruments.Playback
 			if (state.IsPlaying)
 			{
 				StartPlaybackDenyOwner opInProgress = new StartPlaybackDenyOwner();
-				opInProgress.Reason = StartPlaybackDenyOwner.DenyReason.OperationInProgress;
+				opInProgress.Reason = DenyPlaybackReason.OperationInProgress;
 				ServerChannel.SendPacket(opInProgress, source);
 				return;
 			}
@@ -224,7 +236,7 @@ namespace Instruments.Playback
 			if (!fileValidated)
 			{
 				StartPlaybackDenyOwner deny = new StartPlaybackDenyOwner();
-				deny.Reason = StartPlaybackDenyOwner.DenyReason.InvalidFile;
+				deny.Reason = DenyPlaybackReason.InvalidFile;
 				ServerChannel.SendPacket(deny, source);
 				return;
 			}
@@ -263,14 +275,24 @@ namespace Instruments.Playback
 			PlaybackStateServer state = GetPlaybackState(source.ClientId) as PlaybackStateServer;
 			if (!state.IsPlaying)
 			{
-				// TODO@exocs: Respond.
 				return;
 			}
 
+			StopPlayback(source.ClientId, StopPlaybackReason.Cancelled);
+		}
+		//
+		// Summary:
+		//     Stops the playback for provided clientId and broadcasts the action to all clients.
+		protected void StopPlayback(int clientId, StopPlaybackReason reason)
+		{
+			PlaybackStateServer state = GetPlaybackState(clientId) as PlaybackStateServer;
+			Debug.Assert(state.IsPlaying);
+			
 			// Send a packet to all the clients, including the instigator, to stop
 			// the current playback.
 			StopPlaybackBroadcast stopBroadcast = new StopPlaybackBroadcast();
-			stopBroadcast.ClientId = source.ClientId;
+			stopBroadcast.ClientId = clientId;
+			stopBroadcast.Reason = reason;
 			ServerChannel.BroadcastPacket(stopBroadcast);
 
 			// Set the local state of the playback.

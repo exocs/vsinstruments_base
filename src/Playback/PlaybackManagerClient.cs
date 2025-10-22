@@ -196,7 +196,7 @@ namespace Instruments.Playback
 		//     This callback is called for all players except the actual instigator (the instrument player).
 		protected void OnStopPlaybackBroadcast(StopPlaybackBroadcast packet)
 		{
-			StopPlayback(packet.ClientId);
+			StopPlayback(packet.ClientId, packet.Reason);
 		}
 		//
 		// Summary:
@@ -206,7 +206,7 @@ namespace Instruments.Playback
 		{
 			FileTree.Node node = ClientFileManager.UserTree.Find(packet.File);
 			StartPlayback(ClientAPI.World.Player.ClientId, node, packet.Channel, packet.Instrument, 0);
-			ShowPlaybackNotification($"Playing {System.IO.Path.GetFileNameWithoutExtension(packet.File)}.");
+			ShowPlaybackNotification($"Playing track #{packet.Channel:00} of {System.IO.Path.GetFileNameWithoutExtension(packet.File)}.");
 		}
 		//
 		// Summary:
@@ -214,7 +214,7 @@ namespace Instruments.Playback
 		//     This callback is called for the actual instigator only.
 		protected void OnStartPlaybackDenyOwner(StartPlaybackDenyOwner packet)
 		{
-			ShowPlaybackErrorMessage(packet.ReasonText);
+			ShowPlaybackErrorMessage(packet.Reason.GetText());
 		}
 		//
 		// Summary:
@@ -244,7 +244,7 @@ namespace Instruments.Playback
 		//
 		// Summary:
 		//     Stops the actual playback for the provided client, locally.
-		protected void StopPlayback(int clientId)
+		protected void StopPlayback(int clientId, StopPlaybackReason reason)
 		{
 			PlaybackStateClient state = GetPlaybackState(clientId) as PlaybackStateClient;
 			state.StopPlayback();
@@ -253,7 +253,7 @@ namespace Instruments.Playback
 			// for the owner/instigator specifically, this can be changed.
 			if (clientId == ClientAPI.World.Player.ClientId)
 			{
-				ShowPlaybackNotification("Playback stopped on user request.");
+				ShowPlaybackNotification($"Playback stopped: {reason.GetText()}");
 			}
 		}
 		//
@@ -271,7 +271,7 @@ namespace Instruments.Playback
 
 				if (state.IsFinished)
 				{
-					StopPlayback(state.ClientId);
+					StopPlayback(state.ClientId, StopPlaybackReason.Finished);
 				}
 			}
 		}
