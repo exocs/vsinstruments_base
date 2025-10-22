@@ -131,12 +131,15 @@ namespace Instruments.Playback
 				PlaybackStateServer state = new PlaybackStateServer(api, player);
 				AddPlaybackState(state);
 			};
+			
 			// And dispose of it, making sure to terminate any outgoing playback for players that are leaving.
 			ServerAPI.Event.PlayerLeave += (IServerPlayer player) =>
 			{
-				if (RemovePlaybackState(player.ClientId, out PlaybackStateServer state))
+				if (RemovePlaybackState(player.ClientId, out PlaybackStateServer state) && state.IsPlaying)
 				{
-					// TODO@exocs: Stop the playback!
+					// Simply stop the playback locally. Other clients are already aware of the specified user
+					// leaving, there is no need to do additional synchronization.
+					state.StopPlayback();
 				}
 			};
 
