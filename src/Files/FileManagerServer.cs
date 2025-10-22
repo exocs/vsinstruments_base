@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using Vintagestory.API.Server;
 using Instruments.Core;
-using Instruments.Network.Packets;
+using Instruments.Network.Files;
 
 namespace Instruments.Files
 {
@@ -50,7 +49,7 @@ namespace Instruments.Files
 		protected override void SubmitRequest(FileRequest request)
 		{
 			GetFileRequest requestPacket = new GetFileRequest();
-			requestPacket.RequestID = request.RequestID;
+			requestPacket.RequestId = (ulong)request.RequestId;
 			requestPacket.File = request.RelativePath;
 			ServerChannel.SendPacket(requestPacket, request.Source as IServerPlayer);
 		}
@@ -60,7 +59,7 @@ namespace Instruments.Files
 		//     This method will return locally cached files, if any are present before dispatching requests.
 		protected void OnGetFile(IServerPlayer source, GetFileResponse packet)
 		{
-			CompleteRequest(packet.RequestID, (request) =>
+			CompleteRequest((RequestId)packet.RequestId, (request) =>
 			{
 				using (FileStream file = CreateFile(request.DataPath))
 				{
@@ -87,7 +86,7 @@ namespace Instruments.Files
 			//   Cache the last used files in already compressed state,
 			//   and just dispatch the available data directly.
 			GetFileResponse response = new GetFileResponse();
-			response.RequestID = packet.RequestID;
+			response.RequestId = packet.RequestId;
 			FileToPacket(node, response);
 
 			ServerChannel.SendPacket(response, source);

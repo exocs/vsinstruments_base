@@ -1,7 +1,7 @@
-﻿using Instruments.Files;
-using ProtoBuf;
+﻿using ProtoBuf;
+using Instruments.Files;
 
-namespace Instruments.Network.Packets
+namespace Instruments.Network.Files
 {
 	[ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
 	public class GetFileResponse
@@ -9,7 +9,7 @@ namespace Instruments.Network.Packets
 		//
 		// Summary:
 		//     The unique identifier of this request.
-		public int RequestID;
+		public ulong RequestId;
 		//
 		// Summary:
 		//     Uncompressed (original) size.

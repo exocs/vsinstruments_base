@@ -5,7 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Vintagestory.API.Common;
-using Instruments.Network.Packets;
+using Instruments.Network.Files;
 
 namespace Instruments.Files
 {
@@ -24,6 +24,80 @@ namespace Instruments.Files
 	{
 		//
 		// Summary:
+		//     This structure represents a single file request identifier.
+		//     It is composed of two 32 bit values to create unique ranges for individual clients.
+		protected readonly struct RequestId
+		{
+			//
+			// Summary:
+			//     The internal composed value.
+			private readonly ulong _value;
+			//
+			// Summary:
+			//     Creates new request identifier from the provided composed value.
+			public RequestId(ulong value)
+			{
+				_value = value;
+			}
+			//
+			// Summary:
+			//     Creates new request identifier from the high and low components of the composed value.
+			public RequestId(int high, int low)
+			{
+				_value = ((ulong)(uint)high << 32) | (uint)low;
+			}
+			//
+			// Summary:
+			//     Creates a copy of a request identifier.
+			public RequestId(RequestId other)
+			{
+				_value = other._value;
+			}
+			//
+			// Summary:
+			//     Returns the high component of the internal value.
+			public int High
+			{
+				get
+				{
+					return (int)(_value >> 32);
+				}
+			}
+			//
+			// Summary:
+			//     Returns the low component of the internal value.
+			public int Low
+			{
+				get
+				{
+					return (int)(_value & 0xFFFFFFFF);
+				}
+			}
+			//
+			// Summary:
+			//     Converts an internal value to a request identifier.
+			public static explicit operator RequestId(ulong value)
+			{
+				return new RequestId(value);
+			}
+			//
+			// Summary:
+			//     Converts a request identifier to its internal value.
+			public static explicit operator ulong(RequestId requestId)
+			{
+				return requestId._value;
+			}
+			//
+			// Summary:
+			//     Returns hash code for this identifier.
+			public override int GetHashCode()
+			{
+				return _value.GetHashCode();
+			}
+		}
+
+		//
+		// Summary:
 		//     Method delegate for callbacks that request a file.
 		public delegate void RequestFileCallback(FileTree.Node file, object context);
 		//
@@ -38,7 +112,7 @@ namespace Instruments.Files
 			//
 			// Summary:
 			//     Unique identifier of this request.
-			private int _id;
+			private RequestId _id;
 			//
 			// Summary:
 			//     The player the file is requested from.
@@ -58,7 +132,7 @@ namespace Instruments.Files
 			//
 			// Summary:
 			//     Creates new file request.
-			public FileRequest(IPlayer source, int id, string file, RequestFileCallback callback, object context = null)
+			public FileRequest(IPlayer source, RequestId id, string file, RequestFileCallback callback, object context = null)
 			{
 				_source = source;
 				_file = file;
@@ -79,7 +153,7 @@ namespace Instruments.Files
 			//
 			// Summary:
 			//     Returns the unique identifier of this request.
-			public int RequestID
+			public RequestId RequestId
 			{
 				get
 				{
@@ -118,7 +192,7 @@ namespace Instruments.Files
 		// Summary:
 		//     Pending requests by their id.
 		// TODO@exocs: Timeout and clear on player disconnection
-		protected Dictionary<int, FileRequest> Requests { get; private set; }
+		protected Dictionary<RequestId, FileRequest> Requests { get; private set; }
 		//
 		// Summary:
 		//     Last used request ID.
@@ -126,9 +200,9 @@ namespace Instruments.Files
 		//
 		// Summary:
 		//     Returns next request ID in sequence.
-		protected static int NextRequestID()
+		protected static RequestId NextRequestID(int clientId)
 		{
-			return _nextRequestId++;
+			return new RequestId(clientId, _nextRequestId++);
 		}
 		//
 		// Summary:	 
@@ -222,7 +296,7 @@ namespace Instruments.Files
 		{
 			UserTree = new FileTree(userPath);
 			DataTree = new FileTree(dataPath);
-			Requests = new Dictionary<int, FileRequest>(32);
+			Requests = new Dictionary<RequestId, FileRequest>(32);
 
 			api.Event.RegisterGameTickListener(Update, Constants.Files.ManagerTickInterval);
 		}
@@ -318,7 +392,7 @@ namespace Instruments.Files
 				throw new InvalidDataException();
 
 			// With the file not present, add the request to the "queue".
-			int requestID = NextRequestID();
+			RequestId requestID = NextRequestID(source.ClientId);
 			FileRequest request = new FileRequest(source, requestID, file, callback, context);
 			Requests.Add(requestID, request);
 
@@ -331,7 +405,7 @@ namespace Instruments.Files
 		//
 		// Summary:
 		//     Completes the provided request, returning the resulting file node.
-		protected void CompleteRequest(int requestID, CreateFileCallback createFile)
+		protected void CompleteRequest(RequestId requestID, CreateFileCallback createFile)
 		{
 			if (Requests.TryGetValue(requestID, out FileRequest request))
 			{

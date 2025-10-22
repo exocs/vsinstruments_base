@@ -1,6 +1,6 @@
 ﻿using ProtoBuf;
 
-namespace Instruments.Network.Packets
+namespace Instruments.Network.Files
 {
 	//
 	// Summary:
@@ -11,7 +11,7 @@ namespace Instruments.Network.Packets
 		//
 		// Summary:
 		//     The unique identifier of this request.
-		public int RequestID;
+		public ulong RequestId;
 		//
 		// Summary:
 		//     File path relative to the user directory tree.

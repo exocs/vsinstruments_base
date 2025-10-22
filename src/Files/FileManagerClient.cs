@@ -1,7 +1,7 @@
-﻿using Vintagestory.API.Client;
-using System.IO;
+﻿using System.IO;
+using Vintagestory.API.Client;
 using Instruments.Core;
-using Instruments.Network.Packets;
+using Instruments.Network.Files;
 
 namespace Instruments.Files
 {
@@ -62,7 +62,7 @@ namespace Instruments.Files
 
 			// Directly send the response back.
 			GetFileResponse response = new GetFileResponse();
-			response.RequestID = request.RequestID;
+			response.RequestId = request.RequestId;
 			FileToPacket(node, response);
 			ClientChannel.SendPacket(response);
 		}
@@ -72,7 +72,7 @@ namespace Instruments.Files
 		protected override void SubmitRequest(FileRequest request)
 		{
 			GetFileRequest requestPacket = new GetFileRequest();
-			requestPacket.RequestID = request.RequestID;
+			requestPacket.RequestId = (ulong)request.RequestId;
 			requestPacket.File = request.RelativePath;
 			ClientChannel.SendPacket(requestPacket);
 		}
@@ -81,7 +81,7 @@ namespace Instruments.Files
 		//     Callback raised when the server requests a file.
 		protected void OnGetFile(GetFileResponse packet)
 		{
-			CompleteRequest(packet.RequestID, (request) =>
+			CompleteRequest((RequestId)packet.RequestId, (request) =>
 			{
 				using (FileStream file = CreateFile(request.DataPath))
 				{
