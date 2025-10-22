@@ -761,7 +761,7 @@ namespace Instruments.Files
 		//
 		// Summary:
 		//     Invokes all pending enqueued events.
-		protected void PopEvents()
+		protected void PollEvents()
 		{
 			lock (_eventQueue)
 			{
@@ -856,6 +856,37 @@ namespace Instruments.Files
 				PushEvent(new DeletedEvent(node));
 				node.Parent.RemoveChild(node);
 			}
+		}
+		//
+		// Summary:
+		//     Creates a file at the provided relative location.
+		// Parameters:
+		//   relativePath: Path relative to this tree to create a file at.
+		//   awaitTree: Awaits file watcher events resulting in up-to-date tree with new node present.
+		public FileStream CreateFile(string relativePath)
+		{
+			string fullPath = Path.Combine(Root.FullPath, relativePath);
+			string fullDirectoryPath = Path.GetDirectoryName(fullPath);
+			if (!Directory.Exists(fullDirectoryPath))
+			{
+				Directory.CreateDirectory(fullDirectoryPath);
+			}
+
+			// TODO@exocs:
+			//   Disable raising events for the file watcher, create nodes manually (and raise callbacks manually)
+			//   and then re-enable events instead of having to poll and await like this.
+
+			FileStream file = new FileStream(fullPath, FileMode.CreateNew);
+
+			// The file watcher may not be able to raise the changed events in time before the execution of this method returns.
+			// As such awaiting is allowed which periodically polls for the events until the associated node is found.
+			if (true) // await
+			{
+				while (Find(fullPath) == null)
+					PollEvents();
+			}
+
+			return file;
 		}
 		//
 		// Summary:
@@ -987,7 +1018,7 @@ namespace Instruments.Files
 		//     different thread. They are queued and raised during an update instead.
 		public void Update(float deltaTime)
 		{
-			PopEvents();
+			PollEvents();
 		}
 	}
 }
