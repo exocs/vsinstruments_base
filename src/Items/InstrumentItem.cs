@@ -390,6 +390,7 @@ namespace Instruments.Items
 			}
 		}
 
+		[Obsolete("Use InstrumentType and PlaybackManager instead!")]
 		public Sound Play(Pitch pitch, Entity player)
 		{
 			if (!InstrumentType.GetPitchSound(pitch, out string assetPath, out float modPitch))
