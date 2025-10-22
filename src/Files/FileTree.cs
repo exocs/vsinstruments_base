@@ -597,6 +597,25 @@ namespace Instruments.Files
 		private FileSystemWatcher _watcher;
 		//
 		// Summary:
+		//     Utility structure for temporarily blocking the watcher signalization.
+		protected struct BlockWatcherEventsScope : IDisposable
+		{
+			private FileSystemWatcher _watcher;
+			private bool _previousState;
+
+			public BlockWatcherEventsScope(FileSystemWatcher watcher)
+			{
+				_watcher = watcher;
+				_previousState = watcher.EnableRaisingEvents;
+				_watcher.EnableRaisingEvents = false;
+			}
+			public void Dispose()
+			{
+				_watcher.EnableRaisingEvents = _previousState;
+			}
+		}
+		//
+		// Summary:
 		//     Search pattern used when enumerating files and directories.
 		private string _searchPattern = "*";
 		//
@@ -769,7 +788,6 @@ namespace Instruments.Files
 				{
 					queuedEvent.Invoke(this);
 				}
-
 			}
 		}
 		//
@@ -865,6 +883,34 @@ namespace Instruments.Files
 		//   awaitTree: Awaits file watcher events resulting in up-to-date tree with new node present.
 		public FileStream CreateFile(string relativePath)
 		{
+			// Prevent the watcher from raising events, update the entirety of the tree
+			// and raise all callbacks manually.
+			using BlockWatcherEventsScope block = new BlockWatcherEventsScope(_watcher);
+
+			// Creates all nodes from the first existing and available parent node all
+			// the way up to the file name.
+			Node createNodeRecursive(string fullPath)
+			{
+				string parentPath = Path.GetDirectoryName(fullPath);
+				Node parent = Find(parentPath);
+				if (parent == null)
+				{
+					parent = createNodeRecursive(parentPath);
+				}
+
+				Node node = new Node(fullPath);
+				parent.AddChild(node);
+				BuildBranches(node);
+
+				// Do not fire event directly as it may be called from a different
+				// than the calling thread, enqueue it instead.
+				PushEvent(new CreatedEvent(node));
+				return node;
+			}
+
+			// Create all physical directories leading up to the last parent directory.
+			// Watcher events are blocked, so no events will be raised. Those will be emulated
+			// by creating the nodes directly instead.
 			string fullPath = Path.Combine(Root.FullPath, relativePath);
 			string fullDirectoryPath = Path.GetDirectoryName(fullPath);
 			if (!Directory.Exists(fullDirectoryPath))
@@ -872,19 +918,10 @@ namespace Instruments.Files
 				Directory.CreateDirectory(fullDirectoryPath);
 			}
 
-			// TODO@exocs:
-			//   Disable raising events for the file watcher, create nodes manually (and raise callbacks manually)
-			//   and then re-enable events instead of having to poll and await like this.
-
-			FileStream file = new FileStream(fullPath, FileMode.CreateNew);
-
-			// The file watcher may not be able to raise the changed events in time before the execution of this method returns.
-			// As such awaiting is allowed which periodically polls for the events until the associated node is found.
-			if (true) // await
-			{
-				while (Find(fullPath) == null)
-					PollEvents();
-			}
+			// With existing physical directories, create the physical file followed up
+			// by creating the (possibly missing) node hierarchy for the provided node.
+			FileStream file = new FileStream(fullPath, FileMode.Create);
+			Node node = createNodeRecursive(fullPath);
 
 			return file;
 		}
